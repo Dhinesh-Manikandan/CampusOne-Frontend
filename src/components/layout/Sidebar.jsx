@@ -1,26 +1,29 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, Calendar, Bell, User, GraduationCap, Settings } from 'lucide-react';
+import { LayoutDashboard, UserCheck, ShieldCheck, User, Sparkles } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import './Sidebar.css';
 
 export const Sidebar = ({ isOpen, onClose }) => {
+  const { user } = useAuth();
+  const role = user?.role || 'STUDENT';
+
   const navItems = [
     { label: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { label: 'Courses', path: '/courses', icon: BookOpen },
-    { label: 'Attendance', path: '/attendance', icon: Calendar },
-    { label: 'Announcements', path: '/announcements', icon: Bell },
-    { label: 'Profile', path: '/profile', icon: User },
+    { label: 'Admin Requests', path: '/admin-requests', icon: UserCheck },
+    { label: 'App Admin Directory', path: '/app-admins', icon: ShieldCheck },
+    { label: 'Student Profile', path: '/profile', icon: User },
   ];
 
   return (
     <aside className={`sidebar glass-panel ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-brand">
         <div className="brand-logo">
-          <GraduationCap size={28} className="brand-icon" />
+          <Sparkles size={26} className="brand-icon" />
         </div>
         <div className="brand-text">
-          <h2>CampusOne</h2>
-          <span>Portal</span>
+          <h2>Gather</h2>
+          <span>Core Platform</span>
         </div>
       </div>
 
@@ -43,10 +46,10 @@ export const Sidebar = ({ isOpen, onClose }) => {
 
       <div className="sidebar-footer">
         <div className="footer-card">
-          <GraduationCap size={20} className="footer-card-icon" />
+          <Sparkles size={18} className="footer-card-icon" />
           <div className="footer-card-text">
-            <p className="title">CampusOne v1.0</p>
-            <p className="sub">DevOps Engineering</p>
+            <p className="title">Dhinesh Module</p>
+            <p className="sub">Role: {role}</p>
           </div>
         </div>
       </div>

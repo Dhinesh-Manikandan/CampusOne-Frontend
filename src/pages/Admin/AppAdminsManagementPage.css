@@ -1,0 +1,49 @@
+.app-admins-page {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.admins-table-wrapper {
+  overflow-x: auto;
+}
+
+.admins-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.admins-table th,
+.admins-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.admins-table th {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.adm-name-cell {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.adm-icon {
+  color: var(--brand-500);
+}
+
+.btn-remove {
+  color: var(--accent-rose);
+  border-color: rgba(244, 63, 94, 0.3);
+}
+
+.btn-remove:hover {
+  background-color: rgba(244, 63, 94, 0.1);
+}

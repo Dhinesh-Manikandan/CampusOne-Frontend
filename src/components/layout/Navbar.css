@@ -22,7 +22,7 @@
   border: 1px solid var(--card-border);
   border-radius: var(--radius-full);
   padding: 0.5rem 1rem;
-  width: 320px;
+  width: 340px;
   transition: all var(--transition-fast);
 }
 
@@ -48,6 +48,30 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+
+.role-switcher-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--card-border);
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-full);
+}
+
+.role-icon {
+  color: var(--brand-500);
+}
+
+.role-select {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.775rem;
+  font-weight: 700;
+  color: var(--brand-600);
+  cursor: pointer;
 }
 
 .icon-btn {
@@ -178,6 +202,9 @@
     display: flex;
   }
   .profile-name {
+    display: none;
+  }
+  .role-switcher-pill {
     display: none;
   }
 }
