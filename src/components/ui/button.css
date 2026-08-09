@@ -1,0 +1,39 @@
+/* UI Button Styling */
+.ui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-family: inherit;
+  font-size: 0.925rem;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+  border: 1.5px solid #e2e8f0;
+  background-color: #ffffff;
+  color: #0f172a;
+  padding: 0.75rem 1rem;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.ui-button.btn-outline {
+  border-color: #e2e8f0;
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+.ui-button.btn-outline:hover,
+.ui-button.btn-outline:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3.5px rgba(79, 70, 229, 0.12);
+}
+
+[data-theme='dark'] .ui-button.btn-outline {
+  background-color: #1e293b;
+  border-color: #334155;
+  color: #f8fafc;
+}

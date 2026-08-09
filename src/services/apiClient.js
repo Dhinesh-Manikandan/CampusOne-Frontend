@@ -1,5 +1,29 @@
 // Centralized API Client for CampusOne Backend (Spring Boot API integration)
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('campusone_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
+const handleResponse = async (response) => {
+  let data;
+  try {
+    data = await response.json();
+  } catch (err) {
+    data = null;
+  }
+
+  if (!response.ok) {
+    const errorMsg = data?.message || data?.error || `API Error (${response.status}): ${response.statusText}`;
+    const error = new Error(errorMsg);
+    error.status = response.status;
+    error.data = data;
+    throw error;
+  }
+
+  return data;
+};
 
 export const apiClient = {
   async get(endpoint, headers = {}) {
@@ -7,13 +31,11 @@ export const apiClient = {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthHeaders(),
         ...headers,
       },
     });
-    if (!response.ok) {
-      throw new Error(`API Error ${response.status}: ${response.statusText}`);
-    }
-    return response.json();
+    return handleResponse(response);
   },
 
   async post(endpoint, body, headers = {}) {
@@ -21,14 +43,12 @@ export const apiClient = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthHeaders(),
         ...headers,
       },
       body: JSON.stringify(body),
     });
-    if (!response.ok) {
-      throw new Error(`API Error ${response.status}: ${response.statusText}`);
-    }
-    return response.json();
+    return handleResponse(response);
   },
 
   async put(endpoint, body, headers = {}) {
@@ -36,14 +56,12 @@ export const apiClient = {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthHeaders(),
         ...headers,
       },
       body: JSON.stringify(body),
     });
-    if (!response.ok) {
-      throw new Error(`API Error ${response.status}: ${response.statusText}`);
-    }
-    return response.json();
+    return handleResponse(response);
   },
 
   async delete(endpoint, headers = {}) {
@@ -51,12 +69,11 @@ export const apiClient = {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthHeaders(),
         ...headers,
       },
     });
-    if (!response.ok) {
-      throw new Error(`API Error ${response.status}: ${response.statusText}`);
-    }
-    return response.json();
+    return handleResponse(response);
   },
 };
+
