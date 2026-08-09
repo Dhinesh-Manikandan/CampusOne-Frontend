@@ -1,0 +1,37 @@
+.not-found-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+.not-found-card {
+  text-align: center;
+  max-width: 460px;
+  padding: 3rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.warning-icon {
+  color: var(--accent-amber);
+}
+
+.not-found-card h1 {
+  font-size: 3.5rem;
+  font-weight: 800;
+  color: var(--brand-500);
+  line-height: 1;
+}
+
+.not-found-card h2 {
+  font-size: 1.5rem;
+}
+
+.not-found-card p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+}

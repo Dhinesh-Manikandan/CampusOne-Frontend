@@ -1,0 +1,53 @@
+.announcements-page {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.notices-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.notice-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.notice-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notice-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.notice-title {
+  font-size: 1.25rem;
+}
+
+.notice-content {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.notice-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--card-border);
+}
