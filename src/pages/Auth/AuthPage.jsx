@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import './AuthPage.css';
 
-export const AuthPage = () => {
+export const AuthPage = ({ onLoginSuccess }) => {
   const { theme, toggleTheme } = useTheme();
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
@@ -114,8 +114,13 @@ export const AuthPage = () => {
     setSuccessMessage('');
 
     try {
-      await login(loginData.identifier, loginData.password);
-      navigate(from, { replace: true });
+      const res = await login(loginData.identifier, loginData.password);
+      if (onLoginSuccess) {
+        onLoginSuccess(localStorage.getItem('campusone_token') || localStorage.getItem('token'), res?.user);
+      }
+      if (navigate) {
+        try { navigate(from, { replace: true }); } catch (err) {}
+      }
     } catch (err) {
       setError(formatErrorMessage(err.message || 'Invalid credentials. Please check your details.'));
     } finally {
