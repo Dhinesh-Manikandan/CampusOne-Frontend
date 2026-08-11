@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './styles.css';
 import { AuthPage } from './pages/Auth/AuthPage';
 import Header from './components/events/Header';
+import SidebarNav from './components/events/SidebarNav';
 import DashboardTab from './components/events/DashboardTab';
 import EventsCatalogTab from './components/events/EventsCatalogTab';
 import MyEventsTab from './components/events/MyEventsTab';
@@ -543,129 +544,101 @@ function MainApp() {
   }
 
   return (
-    <div className="app-shell">
+    <div className="official-layout">
       <Toast toast={toast} />
 
-      <Header user={user} logout={logout} />
+      <SidebarNav 
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        events={events}
+        user={user}
+        logout={logout}
+      />
 
-      {/* Main App Navigation Tabs */}
-      <nav className="tab-nav-container">
-        <div className="tab-nav">
-          <button 
-            className={`tab-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setActiveTab('dashboard')}
-          >
-            <i className="fa-solid fa-chart-pie"></i> Dashboard Summary
-          </button>
-          <button 
-            className={`tab-btn ${activeTab === 'events' ? 'active' : ''}`}
-            onClick={() => setActiveTab('events')}
-          >
-            <i className="fa-solid fa-calendar-days"></i> All Events Catalog ({events.length})
-          </button>
-          <button 
-            className={`tab-btn ${activeTab === 'my_events' ? 'active' : ''}`}
-            onClick={() => setActiveTab('my_events')}
-          >
-            <i className="fa-solid fa-folder-open"></i> My Created Events ({events.filter(e => String(e.createdBy) === String(user?.id)).length})
-          </button>
-          <button 
-            className={`tab-btn ${activeTab === 'participants' ? 'active' : ''}`}
-            onClick={() => setActiveTab('participants')}
-          >
-            <i className="fa-solid fa-users"></i> Participant Manager
-          </button>
-          <button 
-            className={`tab-btn ${activeTab === 'announcements' ? 'active' : ''}`}
-            onClick={() => setActiveTab('announcements')}
-          >
-            <i className="fa-solid fa-bullhorn"></i> Noticeboard & Updates
-          </button>
-        </div>
-      </nav>
+      <div className="official-main-content">
+        {/* Main Tab Content */}
+        <main className="main-content" style={{ padding: 0 }}>
+          {activeTab === 'dashboard' && (
+            <DashboardTab 
+              dashboardSummary={dashboardSummary}
+              events={events}
+              openCreateEventModal={openCreateEventModal}
+              setActiveTab={setActiveTab}
+            />
+          )}
 
-      {/* Main Tab Content */}
-      <main className="main-content">
-        {activeTab === 'dashboard' && (
-          <DashboardTab 
-            dashboardSummary={dashboardSummary}
-            events={events}
-            openCreateEventModal={openCreateEventModal}
-            setActiveTab={setActiveTab}
-          />
-        )}
+          {activeTab === 'events' && (
+            <EventsCatalogTab 
+              catalogSearch={catalogSearch}
+              setCatalogSearch={setCatalogSearch}
+              categoryFilter={categoryFilter}
+              setCategoryFilter={setCategoryFilter}
+              filteredEvents={filteredEvents}
+              user={user}
+              participantCountMap={participantCountMap}
+              isEventCreator={isEventCreator}
+              viewEventDetails={viewEventDetails}
+              handleRegister={handleRegister}
+              openEditEventModal={openEditEventModal}
+              handleDeleteEvent={handleDeleteEvent}
+              setSelectedEventId={setSelectedEventId}
+              setActiveTab={setActiveTab}
+              loadParticipants={loadParticipants}
+              loadAnnouncements={loadAnnouncements}
+            />
+          )}
 
-        {activeTab === 'events' && (
-          <EventsCatalogTab 
-            catalogSearch={catalogSearch}
-            setCatalogSearch={setCatalogSearch}
-            categoryFilter={categoryFilter}
-            setCategoryFilter={setCategoryFilter}
-            filteredEvents={filteredEvents}
-            user={user}
-            participantCountMap={participantCountMap}
-            isEventCreator={isEventCreator}
-            viewEventDetails={viewEventDetails}
-            handleRegister={handleRegister}
-            openEditEventModal={openEditEventModal}
-            handleDeleteEvent={handleDeleteEvent}
-            setSelectedEventId={setSelectedEventId}
-            setActiveTab={setActiveTab}
-            loadParticipants={loadParticipants}
-            loadAnnouncements={loadAnnouncements}
-          />
-        )}
+          {activeTab === 'my_events' && (
+            <MyEventsTab 
+              events={events}
+              user={user}
+              openCreateEventModal={openCreateEventModal}
+              participantCountMap={participantCountMap}
+              isEventCreator={isEventCreator}
+              viewEventDetails={viewEventDetails}
+              handleRegister={handleRegister}
+              openEditEventModal={openEditEventModal}
+              handleDeleteEvent={handleDeleteEvent}
+              setSelectedEventId={setSelectedEventId}
+              setActiveTab={setActiveTab}
+              loadParticipants={loadParticipants}
+              loadAnnouncements={loadAnnouncements}
+            />
+          )}
 
-        {activeTab === 'my_events' && (
-          <MyEventsTab 
-            events={events}
-            user={user}
-            openCreateEventModal={openCreateEventModal}
-            participantCountMap={participantCountMap}
-            isEventCreator={isEventCreator}
-            viewEventDetails={viewEventDetails}
-            handleRegister={handleRegister}
-            openEditEventModal={openEditEventModal}
-            handleDeleteEvent={handleDeleteEvent}
-            setSelectedEventId={setSelectedEventId}
-            setActiveTab={setActiveTab}
-            loadParticipants={loadParticipants}
-            loadAnnouncements={loadAnnouncements}
-          />
-        )}
+          {activeTab === 'participants' && (
+            <ParticipantsTab 
+              events={events}
+              user={user}
+              selectedEventId={selectedEventId}
+              setSelectedEventId={setSelectedEventId}
+              loadParticipants={loadParticipants}
+              participantSearch={participantSearch}
+              setParticipantSearch={setParticipantSearch}
+              participants={participants}
+              handleCancelRegistration={handleCancelRegistration}
+            />
+          )}
 
-        {activeTab === 'participants' && (
-          <ParticipantsTab 
-            events={events}
-            user={user}
-            selectedEventId={selectedEventId}
-            setSelectedEventId={setSelectedEventId}
-            loadParticipants={loadParticipants}
-            participantSearch={participantSearch}
-            setParticipantSearch={setParticipantSearch}
-            participants={participants}
-            handleCancelRegistration={handleCancelRegistration}
-          />
-        )}
-
-        {activeTab === 'announcements' && (
-          <AnnouncementsTab 
-            events={events}
-            user={user}
-            selectedEventId={selectedEventId}
-            setSelectedEventId={setSelectedEventId}
-            loadAnnouncements={loadAnnouncements}
-            editingAnnouncement={editingAnnouncement}
-            announcementForm={announcementForm}
-            setAnnouncementForm={setAnnouncementForm}
-            handleSaveAnnouncement={handleSaveAnnouncement}
-            cancelEditAnnouncement={cancelEditAnnouncement}
-            announcements={announcements}
-            openEditAnnouncement={openEditAnnouncement}
-            handleDeleteAnnouncement={handleDeleteAnnouncement}
-          />
-        )}
-      </main>
+          {activeTab === 'announcements' && (
+            <AnnouncementsTab 
+              events={events}
+              user={user}
+              selectedEventId={selectedEventId}
+              setSelectedEventId={setSelectedEventId}
+              loadAnnouncements={loadAnnouncements}
+              editingAnnouncement={editingAnnouncement}
+              announcementForm={announcementForm}
+              setAnnouncementForm={setAnnouncementForm}
+              handleSaveAnnouncement={handleSaveAnnouncement}
+              cancelEditAnnouncement={cancelEditAnnouncement}
+              announcements={announcements}
+              openEditAnnouncement={openEditAnnouncement}
+              handleDeleteAnnouncement={handleDeleteAnnouncement}
+            />
+          )}
+        </main>
+      </div>
 
       {/* Modals */}
       <EventModal 
