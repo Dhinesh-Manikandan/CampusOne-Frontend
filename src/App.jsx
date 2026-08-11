@@ -66,11 +66,38 @@ function App() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // 1. Auth: GET /api/auth/me
-  // 1. Auth: GET /api/auth/me or /api/student/me
+  const parseJwt = (tokenStr) => {
+    try {
+      const base64Url = tokenStr.split('.')[1];
+      if (!base64Url) return null;
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+      return JSON.parse(jsonPayload);
+    } catch (e) {
+      return null;
+    }
+  };
+
+  // 1. Auth: GET /api/auth/me or JWT fallback
   const getCurrentUser = async () => {
     const activeToken = token || localStorage.getItem('campusone_token') || localStorage.getItem('token');
     if (!activeToken) return null;
+
+    const jwtClaims = parseJwt(activeToken);
+    let jwtRole = 'STUDENT';
+    let jwtEmail = jwtClaims?.sub || '';
+    let jwtUserId = jwtClaims?.user_id || 1;
+
+    if (jwtClaims?.roles && Array.isArray(jwtClaims.roles) && jwtClaims.roles.length > 0) {
+      const firstRole = jwtClaims.roles[0];
+      jwtRole = typeof firstRole === 'string' ? firstRole.replace('ROLE_', '') : 'STUDENT';
+    }
+
     try {
       let res = await fetch('/api/auth/me', {
         headers: { Authorization: `Bearer ${activeToken}` }
@@ -94,9 +121,10 @@ function App() {
 
         const normalized = {
           ...data,
-          name: data.fullName || data.name || data.username || 'Campus Admin',
-          role: extractedRole || 'ADMIN',
-          id: data.id || data.userId || 1
+          email: data.email || jwtEmail,
+          name: data.fullName || data.name || data.username || (jwtEmail ? jwtEmail.split('@')[0] : 'Campus User'),
+          role: extractedRole || jwtRole,
+          id: data.id || data.userId || jwtUserId
         };
         setUser(normalized);
         return normalized;
@@ -104,14 +132,15 @@ function App() {
     } catch (e) {
       console.error('Error fetching current user:', e);
     }
-    // Fallback default user object for session display
-    const fallbackUser = {
-      name: 'Campus Admin',
-      role: 'ADMIN',
-      id: 1
+
+    const decodedUser = {
+      email: jwtEmail,
+      name: jwtEmail ? jwtEmail.split('@')[0] : 'Campus User',
+      role: jwtRole,
+      id: jwtUserId
     };
-    setUser(fallbackUser);
-    return fallbackUser;
+    setUser(decodedUser);
+    return decodedUser;
   };
 
   // 2. Events: GET /api/events
