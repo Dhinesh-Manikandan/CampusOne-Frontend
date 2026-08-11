@@ -956,8 +956,8 @@ function App() {
                     }}
                   >
                     <option value="">-- Choose an event --</option>
-                    {events.filter(e => e.createdBy === user?.id || user?.role === 'ADMIN').map(e => (
-                      <option key={e.id} value={e.id}>{e.title} (ID: {e.id})</option>
+                    {events.filter(e => String(e.createdBy) === String(user?.id) || user?.role === 'ADMIN' || user?.role === 'APP_ADMIN' || user?.role === 'EVENT_ADMIN').map(e => (
+                      <option key={e.id} value={e.id}>{e.title} (ID: #{e.id})</option>
                     ))}
                   </select>
                 </div>
@@ -993,8 +993,9 @@ function App() {
                       <table className="custom-table">
                         <thead>
                           <tr>
-                            <th>Registration ID</th>
-                            <th>Participant Name</th>
+                            <th>Reg ID</th>
+                            <th>Reg No</th>
+                            <th>Participant Name & Dept</th>
                             <th>Email Address</th>
                             <th>Status</th>
                             <th>Registered At</th>
@@ -1002,32 +1003,44 @@ function App() {
                           </tr>
                         </thead>
                         <tbody>
-                          {participants.map(reg => (
-                            <tr key={reg.id}>
-                              <td>#{reg.id}</td>
-                              <td>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                  <div className="avatar-circle" style={{ width: '32px', height: '32px', fontSize: '13px' }}>
-                                    {reg.user?.name ? reg.user.name.charAt(0).toUpperCase() : 'U'}
+                          {participants.map(reg => {
+                            const participantUser = reg.user || {};
+                            const displayName = participantUser.fullName || participantUser.name || participantUser.username || (participantUser.email ? participantUser.email.split('@')[0] : 'Student Participant');
+                            const regNo = participantUser.registrationNumber || 'N/A';
+                            const deptInfo = participantUser.department ? `${participantUser.department} (Yr ${participantUser.year || 1})` : '';
+                            const participantUserId = participantUser.id || reg.userId;
+
+                            return (
+                              <tr key={reg.id}>
+                                <td>#{reg.id}</td>
+                                <td><span className="badge badge-info" style={{ position: 'static' }}>{regNo}</span></td>
+                                <td>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <div className="avatar-circle" style={{ width: '32px', height: '32px', fontSize: '13px' }}>
+                                      {displayName.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                      <strong>{displayName}</strong>
+                                      {deptInfo && <div style={{ fontSize: '0.8em', color: 'var(--text-muted)' }}>{deptInfo}</div>}
+                                    </div>
                                   </div>
-                                  <strong>{reg.user?.name || 'User'}</strong>
-                                </div>
-                              </td>
-                              <td>{reg.user?.email}</td>
-                              <td>
-                                <span className="role-pill student">{reg.status || 'REGISTERED'}</span>
-                              </td>
-                              <td>{new Date(reg.registeredAt).toLocaleString()}</td>
-                              <td>
-                                <button 
-                                  className="btn btn-danger btn-sm" 
-                                  onClick={() => handleCancelRegistration(selectedEventId, reg.user.id, reg.user?.name)}
-                                >
-                                  <i className="fa-solid fa-user-xmark"></i> Remove
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
+                                </td>
+                                <td>{participantUser.email || 'N/A'}</td>
+                                <td>
+                                  <span className="role-pill student">{reg.status || 'REGISTERED'}</span>
+                                </td>
+                                <td>{reg.registeredAt ? new Date(reg.registeredAt).toLocaleString() : 'Recently'}</td>
+                                <td>
+                                  <button 
+                                    className="btn btn-danger btn-sm" 
+                                    onClick={() => handleCancelRegistration(selectedEventId, participantUserId, displayName)}
+                                  >
+                                    <i className="fa-solid fa-user-xmark"></i> Remove
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
