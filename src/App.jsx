@@ -51,7 +51,9 @@ function App() {
     registrationDeadline: '',
     maxParticipants: '100',
     bannerImage: '',
-    status: 'UPCOMING'
+    status: 'UPCOMING',
+    pdfFile: null,
+    pdfFileName: ''
   });
 
   // UI Toast State
@@ -484,7 +486,9 @@ function App() {
       registrationDeadline: event.registrationDeadline,
       maxParticipants: event.maxParticipants?.toString() || '100',
       bannerImage: event.bannerImage || '',
-      status: event.status || 'PUBLISHED'
+      status: event.status || 'PUBLISHED',
+      pdfFile: event.pdfFile || null,
+      pdfFileName: event.pdfFileName || ''
     });
     setShowEventModal(true);
   };
@@ -501,7 +505,9 @@ function App() {
       registrationDeadline: '',
       maxParticipants: '100',
       bannerImage: '',
-      status: 'UPCOMING'
+      status: 'UPCOMING',
+      pdfFile: null,
+      pdfFileName: ''
     });
   };
 
@@ -1255,6 +1261,62 @@ function App() {
                   required 
                 />
               </div>
+              <div className="form-group full-width" style={{ marginTop: '4px' }}>
+                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Event Description PDF / Rulebook <span style={{ fontSize: '0.85em', color: 'var(--text-muted)', fontWeight: 'normal' }}>(Optional)</span></span>
+                  {eventForm.pdfFileName && (
+                    <span style={{ fontSize: '0.85em', color: '#10b981', fontWeight: 600 }}>
+                      📄 {eventForm.pdfFileName}
+                    </span>
+                  )}
+                </label>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '6px' }}>
+                  <input 
+                    type="file" 
+                    accept=".pdf,application/pdf"
+                    id="event-pdf-upload-input"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+                          showToast('Please upload a valid PDF document', 'error');
+                          return;
+                        }
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                          setEventForm(prev => ({
+                            ...prev,
+                            pdfFile: ev.target.result,
+                            pdfFileName: file.name
+                          }));
+                          showToast(`Attached PDF document "${file.name}"`);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary" 
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                    onClick={() => document.getElementById('event-pdf-upload-input').click()}
+                  >
+                    <i className="fa-solid fa-file-pdf" style={{ color: '#ef4444' }}></i>
+                    {eventForm.pdfFileName ? 'Change PDF File' : 'Upload Event Description PDF'}
+                  </button>
+                  {eventForm.pdfFileName && (
+                    <button 
+                      type="button" 
+                      className="btn btn-secondary btn-sm"
+                      style={{ color: '#ef4444' }}
+                      onClick={() => setEventForm(prev => ({ ...prev, pdfFile: null, pdfFileName: '' }))}
+                    >
+                      <i className="fa-solid fa-trash"></i> Remove PDF
+                    </button>
+                  )}
+                </div>
+              </div>
               <div className="btn-row full-width" style={{ gridColumn: 'span 2', marginTop: '12px' }}>
                 <button type="submit" className="btn btn-primary">
                   <i className="fa-solid fa-floppy-disk"></i> {editingEvent ? 'Save Changes' : 'Publish Event'}
@@ -1283,9 +1345,28 @@ function App() {
               <img src={selectedEventDetails.bannerImage} alt={selectedEventDetails.title} style={{ width: '100%', height: '180px', objectFit: 'cover', borderRadius: 'var(--radius-md)', marginBottom: '16px' }} />
             )}
 
-            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '20px', lineHeight: 1.6 }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px', lineHeight: 1.6 }}>
               {selectedEventDetails.description}
             </p>
+
+            {(selectedEventDetails.pdfFile || selectedEventDetails.pdfFileName) && (
+              <div style={{ marginBottom: '20px', padding: '12px 16px', background: 'rgba(239, 68, 68, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(239, 68, 68, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, fontSize: '0.9em' }}>
+                  <i className="fa-solid fa-file-pdf" style={{ color: '#ef4444', fontSize: '1.2em' }}></i>
+                  {selectedEventDetails.pdfFileName || 'Event_Rulebook_Document.pdf'}
+                </span>
+                <a 
+                  href={selectedEventDetails.pdfFile || '#'} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  download={selectedEventDetails.pdfFileName || 'Event_Description.pdf'}
+                  className="btn btn-primary btn-sm"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}
+                >
+                  <i className="fa-solid fa-download"></i> View / Download PDF
+                </a>
+              </div>
+            )}
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
               <div><strong>Category:</strong> {selectedEventDetails.category}</div>
