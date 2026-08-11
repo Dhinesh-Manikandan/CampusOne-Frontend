@@ -507,11 +507,14 @@ function App() {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('campusone_token');
+    localStorage.removeItem('campusone_refresh_token');
+    localStorage.removeItem('campusone_user');
     setToken('');
     setUser(null);
     setEvents([]);
     setDashboardSummary(null);
-    showToast('Logged out');
+    showToast('Logged out successfully');
   };
 
   const isEventCreator = (event) => user && event.createdBy === user.id;
