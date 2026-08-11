@@ -556,10 +556,13 @@ function MainApp() {
       />
 
       <div className="official-main-content">
+        <Header user={user} logout={logout} activeTab={activeTab} />
+
         {/* Main Tab Content */}
         <main className="main-content" style={{ padding: 0 }}>
           {activeTab === 'dashboard' && (
             <DashboardTab 
+              user={user}
               dashboardSummary={dashboardSummary}
               events={events}
               openCreateEventModal={openCreateEventModal}

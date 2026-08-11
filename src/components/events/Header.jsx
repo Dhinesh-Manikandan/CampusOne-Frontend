@@ -1,16 +1,24 @@
 import React from 'react';
 
-export default function Header({ user, logout }) {
+export default function Header({ user, logout, activeTab }) {
+  const getTabTitle = () => {
+    switch (activeTab) {
+      case 'dashboard': return 'Dashboard Overview & Analytics';
+      case 'events': return 'All Campus Events Catalog';
+      case 'my_events': return 'My Created Events Manager';
+      case 'participants': return 'Participant Manager & Registrations';
+      case 'announcements': return 'Noticeboard & Event Updates';
+      default: return 'CampusOne Event Management';
+    }
+  };
+
   return (
-    <header className="app-header">
-      <div className="brand-logo">
-        <div className="brand-icon">
-          <i className="fa-solid fa-graduation-cap"></i>
-        </div>
-        <div>
-          <div className="brand-title">CampusOne</div>
-          <div className="brand-subtitle">Event Management & Analytics Engine</div>
-        </div>
+    <header className="app-header" style={{ marginBottom: '24px' }}>
+      <div>
+        <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '20px', fontWeight: 700, margin: 0 }}>
+          {getTabTitle()}
+        </h2>
+        <div className="brand-subtitle">CampusOne Official Management Portal</div>
       </div>
 
       {user && (

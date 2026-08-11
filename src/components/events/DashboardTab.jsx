@@ -1,6 +1,7 @@
 import React from 'react';
 
 export default function DashboardTab({
+  user,
   dashboardSummary,
   events,
   openCreateEventModal,
@@ -8,6 +9,40 @@ export default function DashboardTab({
 }) {
   return (
     <div>
+      {/* Personalized Welcome Banner */}
+      <div 
+        className="glass-card" 
+        style={{ 
+          marginBottom: '24px', 
+          padding: '24px 28px', 
+          background: 'var(--primary-gradient)', 
+          color: 'white', 
+          borderRadius: 'var(--radius-lg)', 
+          boxShadow: 'var(--shadow-glow)', 
+          display: 'flex', 
+          justify: 'space-between', 
+          alignItems: 'center', 
+          flexWrap: 'wrap', 
+          gap: '16px' 
+        }}
+      >
+        <div>
+          <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, opacity: 0.9, marginBottom: '4px' }}>
+            Campus Analytics & Control Center
+          </div>
+          <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '26px', fontWeight: 800, marginBottom: '6px' }}>
+            Welcome back, {user?.name || user?.email || 'Campus User'}! 👋
+          </h1>
+          <p style={{ fontSize: '14px', opacity: 0.95 }}>
+            Logged in as <strong style={{ color: '#ffffff', textDecoration: 'underline' }}>{user?.email}</strong> • Role: <span style={{ background: 'rgba(255,255,255,0.25)', padding: '3px 12px', borderRadius: '12px', fontWeight: 700, letterSpacing: '0.5px' }}>{user?.role || 'STUDENT'}</span>
+          </p>
+        </div>
+        <div className="avatar-circle" style={{ width: '56px', height: '56px', fontSize: '24px', background: 'rgba(255,255,255,0.25)', border: '2px solid rgba(255,255,255,0.4)', boxShadow: '0 4px 15px rgba(0,0,0,0.2)', flexShrink: 0 }}>
+          {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+        </div>
+      </div>
+
+      {/* Analytics Metrics Cards */}
       <div className="dashboard-metrics-grid">
         <div className="metric-card glass-card">
           <div className="metric-icon purple">
