@@ -539,6 +539,10 @@ function MainApp() {
     return matchesSearch && matchesCategory;
   });
 
+  // Sidebar Collapse Toggle State
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const toggleSidebar = () => setIsSidebarOpen(prev => !prev);
+
   if (!token && !user) {
     return <AuthPage onLoginSuccess={handleLoginSuccess} />;
   }
@@ -548,6 +552,8 @@ function MainApp() {
       <Toast toast={toast} />
 
       <SidebarNav 
+        isSidebarOpen={isSidebarOpen}
+        toggleSidebar={toggleSidebar}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         events={events}
@@ -555,8 +561,14 @@ function MainApp() {
         logout={logout}
       />
 
-      <div className="official-main-content">
-        <Header user={user} logout={logout} activeTab={activeTab} />
+      <div className={`official-main-content ${isSidebarOpen ? '' : 'collapsed'}`}>
+        <Header 
+          user={user} 
+          logout={logout} 
+          activeTab={activeTab} 
+          isSidebarOpen={isSidebarOpen} 
+          toggleSidebar={toggleSidebar} 
+        />
 
         {/* Main Tab Content */}
         <main className="main-content" style={{ padding: 0 }}>
