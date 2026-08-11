@@ -303,7 +303,8 @@ function App() {
     const payload = {
       ...eventForm,
       maxParticipants: Number(eventForm.maxParticipants),
-      bannerImage: eventForm.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80'
+      bannerImage: eventForm.bannerImage || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80',
+      createdBy: user?.id || 1
     };
 
     const isEdit = !!editingEvent;
@@ -523,7 +524,7 @@ function App() {
     showToast('Logged out successfully');
   };
 
-  const isEventCreator = (event) => user && event.createdBy === user.id;
+  const isEventCreator = (event) => user && (String(event.createdBy) === String(user.id) || user.role === 'ADMIN' || user.role === 'APP_ADMIN');
 
   // Catalog Filters
   const filteredEvents = events.filter(e => {
@@ -854,7 +855,7 @@ function App() {
                 </button>
               </div>
 
-              {events.filter(e => e.createdBy === user?.id).length === 0 ? (
+              {events.filter(e => String(e.createdBy) === String(user?.id)).length === 0 ? (
                 <div className="empty-state glass-card">
                   <i className="fa-solid fa-folder-open"></i>
                   <p>You have not created any events yet.</p>
@@ -864,7 +865,7 @@ function App() {
                 </div>
               ) : (
                 <div className="events-grid">
-                  {events.filter(e => e.createdBy === user?.id).map(event => (
+                  {events.filter(e => String(e.createdBy) === String(user?.id)).map(event => (
                     <div key={event.id} className="event-card">
                       <span className={`status-badge ${event.status?.toLowerCase() || 'published'}`}>
                         {event.status || 'PUBLISHED'}
