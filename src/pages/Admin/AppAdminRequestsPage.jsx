@@ -1,71 +1,57 @@
 import React, { useState, useEffect } from 'react';
-import { UserCheck, Send, Check, X, ShieldAlert, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { UserCheck, Check, X, ShieldAlert, AlertCircle, CheckCircle2, Filter, MessageSquare, Clock } from 'lucide-react';
 import { adminRequestService } from '../../services/adminRequestService';
 import { useAuth } from '../../context/AuthContext';
 import './AppAdminRequestsPage.css';
 
 export const AppAdminRequestsPage = () => {
   const { user } = useAuth();
-  const [requestReason, setRequestReason] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [pendingRequests, setPendingRequests] = useState([]);
+  const [statusFilter, setStatusFilter] = useState('PENDING'); // 'PENDING', 'APPROVED', 'REJECTED'
+  const [requests, setRequests] = useState([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
   const [alert, setAlert] = useState(null);
+  const [rejectModalId, setRejectModalId] = useState(null);
+  const [rejectRemarks, setRejectRemarks] = useState('');
+
+  const isAppAdmin = user?.role === 'APP_ADMIN';
 
   useEffect(() => {
-    fetchPendingRequests();
-  }, []);
+    fetchRequests(statusFilter);
+  }, [statusFilter]);
 
-  const fetchPendingRequests = async () => {
+  const fetchRequests = async (status) => {
     setLoadingRequests(true);
     try {
-      const data = await adminRequestService.getPendingRequests('PENDING');
-      setPendingRequests(Array.isArray(data) ? data : []);
+      const data = await adminRequestService.getPendingRequests(status);
+      setRequests(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Failed to fetch pending requests:', err);
-      setPendingRequests([]);
+      console.error('Failed to fetch requests:', err);
+      setRequests([]);
     } finally {
       setLoadingRequests(false);
-    }
-  };
-
-  const handleStudentSubmit = async (e) => {
-    e.preventDefault();
-    if (!requestReason.trim()) {
-      setAlert({ type: 'error', message: 'Please provide a reason for your admin request.' });
-      return;
-    }
-
-    setSubmitting(true);
-    setAlert(null);
-
-    try {
-      await adminRequestService.submitRequest(requestReason);
-      setAlert({ type: 'success', message: 'App-Admin request submitted successfully!' });
-      setRequestReason('');
-      fetchPendingRequests();
-    } catch (err) {
-      setAlert({ type: 'error', message: err.message || 'Failed to submit request.' });
-    } finally {
-      setSubmitting(false);
     }
   };
 
   const handleApprove = async (id, studentName) => {
     try {
       await adminRequestService.approveRequest(id);
-      setAlert({ type: 'success', message: `Approved request #${id} (${studentName || 'User'})!` });
-      setPendingRequests((prev) => prev.filter((r) => r.id !== id));
+      setAlert({ type: 'success', message: `Approved request for ${studentName || 'User'}!` });
+      fetchRequests(statusFilter);
     } catch (err) {
       setAlert({ type: 'error', message: err.message || 'Failed to approve request.' });
     }
   };
 
-  const handleReject = async (id, studentName) => {
+  const handleRejectSubmit = async (e) => {
+    e.preventDefault();
+    if (!rejectModalId) return;
+
     try {
-      await adminRequestService.rejectRequest(id, 'Not enough justification');
-      setAlert({ type: 'info', message: `Rejected request #${id}.` });
-      setPendingRequests((prev) => prev.filter((r) => r.id !== id));
+      await adminRequestService.rejectRequest(rejectModalId, rejectRemarks || 'Not enough justification at this time');
+      setAlert({ type: 'info', message: `Rejected request.` });
+      setRejectModalId(null);
+      setRejectRemarks('');
+      fetchRequests(statusFilter);
     } catch (err) {
       setAlert({ type: 'error', message: err.message || 'Failed to reject request.' });
     }
@@ -73,93 +59,142 @@ export const AppAdminRequestsPage = () => {
 
   return (
     <div className="admin-requests-page">
-      <div className="page-header">
+      <div className="page-header" style={{ marginBottom: '1.5rem' }}>
         <div>
-          <h1>App-Admin Request Management</h1>
-          <p>Submit privilege requests or approve/reject pending student requests.</p>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800 }}>App-Admin Privilege Requests</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+            Review, approve, or reject administrative role requests submitted by Students and Event Admins.
+          </p>
         </div>
       </div>
 
       {alert && (
-        <div className={`auth-alert ${alert.type === 'success' ? 'alert-success' : 'alert-error'}`}>
+        <div className={`auth-alert ${alert.type === 'success' ? 'alert-success' : 'alert-error'}`} style={{ marginBottom: '1.25rem' }}>
           {alert.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
           <span>{alert.message}</span>
         </div>
       )}
 
-      <div className="requests-page-grid">
-        {/* Submit Request (Student Side) */}
-        <div className="card request-form-card">
-          <div className="card-header">
-            <h2>Submit App-Admin Request</h2>
-          </div>
-
-          <form onSubmit={handleStudentSubmit} className="request-form">
-            <div className="form-group">
-              <label>Request Reason / Justification *</label>
-              <textarea
-                rows={5}
-                placeholder="Enter request reason (API: POST /api/app-admin-requests)..."
-                value={requestReason}
-                onChange={(e) => setRequestReason(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="info-box">
-              <ShieldAlert size={18} className="info-icon" />
-              <p>API Endpoint: <code>POST /api/app-admin-requests</code>. Once approved by an Application Admin, your account gains administrative privileges.</p>
-            </div>
-
-            <button type="submit" className="btn btn-primary btn-full" disabled={submitting}>
-              {submitting ? 'Submitting Request...' : <><Send size={16} /> Submit App-Admin Request</>}
-            </button>
-          </form>
-        </div>
-
-        {/* Review Pending Requests (Admin Side) */}
-        <div className="card admin-review-card">
-          <div className="card-header">
-            <h2>Pending App-Admin Requests</h2>
-            <span className="badge badge-warning">{pendingRequests.length} Pending</span>
-          </div>
-
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-            APIs: <code>GET /api/admin/app-admin-requests?status=PENDING</code>, <code>POST .../approve</code>, <code>POST .../reject</code>
-          </p>
-
-          {loadingRequests ? (
-            <p style={{ color: 'var(--text-muted)' }}>Loading pending requests...</p>
-          ) : pendingRequests.length === 0 ? (
-            <p className="no-requests">No pending requests found.</p>
-          ) : (
-            <div className="requests-review-list">
-              {pendingRequests.map((req) => (
-                <div key={req.id} className="review-card-item">
-                  <div className="review-header">
-                    <div>
-                      <h4 className="req-name">{req.fullName || req.studentName || `Request #${req.id}`}</h4>
-                      <span className="req-reg">Reg No: {req.registrationNumber || req.userId || 'N/A'}</span>
-                    </div>
-                    <span className="badge badge-warning">{req.status || 'PENDING'}</span>
-                  </div>
-
-                  <p className="req-reason">"{req.requestReason}"</p>
-
-                  <div className="req-actions">
-                    <button className="btn btn-primary btn-sm" onClick={() => handleApprove(req.id, req.fullName || req.studentName)}>
-                      <Check size={14} /> Approve
-                    </button>
-                    <button className="btn btn-secondary btn-sm btn-reject" onClick={() => handleReject(req.id, req.fullName || req.studentName)}>
-                      <X size={14} /> Reject
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      {/* Filter Tabs */}
+      <div className="profile-tabs" style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.75rem' }}>
+        <button
+          className={`tab-btn ${statusFilter === 'PENDING' ? 'active' : ''}`}
+          onClick={() => setStatusFilter('PENDING')}
+        >
+          <Clock size={16} /> Pending Requests
+        </button>
+        <button
+          className={`tab-btn ${statusFilter === 'APPROVED' ? 'active' : ''}`}
+          onClick={() => setStatusFilter('APPROVED')}
+        >
+          <CheckCircle2 size={16} /> Approved Requests
+        </button>
+        <button
+          className={`tab-btn ${statusFilter === 'REJECTED' ? 'active' : ''}`}
+          onClick={() => setStatusFilter('REJECTED')}
+        >
+          <X size={16} /> Rejected Requests
+        </button>
       </div>
+
+      {/* Review Card */}
+      <div className="card admin-review-card">
+        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h2>{statusFilter} Requests</h2>
+          <span className={`badge ${statusFilter === 'PENDING' ? 'badge-warning' : statusFilter === 'APPROVED' ? 'badge-success' : 'badge-danger'}`}>
+            {requests.length} {statusFilter}
+          </span>
+        </div>
+
+        {loadingRequests ? (
+          <p style={{ color: 'var(--text-muted)', padding: '1rem 0' }}>Loading requests...</p>
+        ) : requests.length === 0 ? (
+          <p className="no-requests" style={{ color: 'var(--text-muted)', padding: '1.5rem 0', textAlign: 'center' }}>
+            No {statusFilter.toLowerCase()} requests found.
+          </p>
+        ) : (
+          <div className="requests-review-list" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {requests.map((req) => {
+              const reqUser = req.requestedBy || req.userResponse || {};
+              const userName = reqUser.fullName || reqUser.name || req.studentName || 'Applicant User';
+              const userEmail = reqUser.email || req.email || 'N/A';
+              const userReg = reqUser.registrationNumber || req.registrationNumber || 'N/A';
+              const userDept = reqUser.department ? `Dept: ${reqUser.department}` : '';
+              const userYear = reqUser.year ? `Year ${reqUser.year}` : '';
+              const userPhone = reqUser.phoneNumber ? `Ph: ${reqUser.phoneNumber}` : '';
+
+              return (
+                <div key={req.id} className="card" style={{ padding: '1.25rem', border: '1px solid var(--card-border)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                    <div>
+                      <h4 style={{ fontSize: '1.05rem', fontWeight: 700 }}>{userName}</h4>
+                      <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)' }}>
+                        {userEmail} • Reg No: <code>{userReg}</code> {userDept ? `• ${userDept}` : ''} {userYear ? `(${userYear})` : ''} {userPhone ? `• ${userPhone}` : ''}
+                      </p>
+                    </div>
+                    <span className={`badge ${req.status === 'PENDING' ? 'badge-warning' : req.status === 'APPROVED' ? 'badge-success' : 'badge-danger'}`}>
+                      {req.status || statusFilter}
+                    </span>
+                  </div>
+
+                  <div style={{ background: 'var(--bg-tertiary)', padding: '0.85rem 1rem', borderRadius: '8px', marginBottom: '1rem' }}>
+                    <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                      <MessageSquare size={14} style={{ display: 'inline', marginRight: '4px' }} /> Justification Reason:
+                    </p>
+                    <p style={{ fontSize: '0.9rem', fontStyle: 'italic' }}>"{req.requestReason}"</p>
+                  </div>
+
+                  {req.remarks && (
+                    <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                      <strong>Remarks:</strong> {req.remarks}
+                    </p>
+                  )}
+
+                  {req.status === 'PENDING' && (
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button className="btn btn-primary btn-sm" onClick={() => handleApprove(req.id, userName)}>
+                        <Check size={15} /> Approve & Grant Admin
+                      </button>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => { setRejectModalId(req.id); setRejectRemarks(''); }}
+                        style={{ color: '#e11d48' }}
+                      >
+                        <X size={15} /> Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Reject Remarks Modal */}
+      {rejectModalId && (
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="card" style={{ maxWidth: '450px', width: '90%', padding: '1.5rem' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>Reject Request</h3>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Provide optional remarks for rejecting this request.</p>
+            <form onSubmit={handleRejectSubmit}>
+              <textarea
+                className="form-control"
+                rows={3}
+                placeholder="e.g. Needs higher department clearance..."
+                value={rejectRemarks}
+                onChange={(e) => setRejectRemarks(e.target.value)}
+                style={{ marginBottom: '1rem' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRejectModalId(null)}>Cancel</button>
+                <button type="submit" className="btn btn-primary btn-sm" style={{ background: '#e11d48', borderColor: '#e11d48' }}>Reject Request</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+

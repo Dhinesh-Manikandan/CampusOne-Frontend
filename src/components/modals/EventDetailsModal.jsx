@@ -51,7 +51,7 @@ export default function EventDetailsModal({
           <div><strong>Date:</strong> {selectedEventDetails.eventDate}</div>
           <div><strong>Time:</strong> {selectedEventDetails.startTime} - {selectedEventDetails.endTime}</div>
           <div><strong>Deadline:</strong> {selectedEventDetails.registrationDeadline || 'None'}</div>
-          <div><strong>Created By User ID:</strong> #{selectedEventDetails.createdBy}</div>
+          <div><strong>Created By:</strong> {selectedEventDetails.createdByUsername || selectedEventDetails.createdByEmail || 'Event Admin'}</div>
           <div><strong>Registered Count:</strong> {participantCountMap[selectedEventDetails.id] ?? selectedEventDetails.registeredCount ?? 0} / {selectedEventDetails.maxParticipants}</div>
           <div><strong>Status:</strong> <span className={`status-badge ${selectedEventDetails.status?.toLowerCase()}`} style={{ position: 'static' }}>{selectedEventDetails.status}</span></div>
         </div>

@@ -116,7 +116,7 @@ export const AuthPage = ({ onLoginSuccess }) => {
     try {
       const res = await login(loginData.identifier, loginData.password);
       if (onLoginSuccess) {
-        onLoginSuccess(localStorage.getItem('campusone_token') || localStorage.getItem('token'), res?.user);
+        onLoginSuccess(localStorage.getItem('gather_token'), res?.user);
       }
       if (navigate) {
         try { navigate(from, { replace: true }); } catch (err) {}

@@ -36,7 +36,7 @@ export default function ParticipantsTab({
           >
             <option value="">-- Choose an event --</option>
             {adminEvents.map(e => (
-              <option key={e.id} value={e.id}>{e.title} (ID: #{e.id})</option>
+              <option key={e.id} value={e.id}>{e.title}</option>
             ))}
           </select>
         </div>
@@ -52,11 +52,18 @@ export default function ParticipantsTab({
               <i className="fa-solid fa-magnifying-glass"></i>
               <input 
                 type="text" 
-                placeholder="Search name or email..." 
+                placeholder="Search name/email (press Enter)..." 
                 value={participantSearch}
                 onChange={e => {
                   setParticipantSearch(e.target.value);
-                  loadParticipants(selectedEventId, e.target.value);
+                  if (!e.target.value.trim()) {
+                    loadParticipants(selectedEventId, '');
+                  }
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    loadParticipants(selectedEventId, participantSearch);
+                  }
                 }}
               />
             </div>
@@ -72,7 +79,7 @@ export default function ParticipantsTab({
               <table className="custom-table">
                 <thead>
                   <tr>
-                    <th>Reg ID</th>
+                    <th>S.No</th>
                     <th>Reg No</th>
                     <th>Participant Name & Dept</th>
                     <th>Email Address</th>
@@ -82,7 +89,7 @@ export default function ParticipantsTab({
                   </tr>
                 </thead>
                 <tbody>
-                  {participants.map(reg => {
+                  {participants.map((reg, index) => {
                     const participantUser = reg.user || {};
                     const displayName = participantUser.fullName || participantUser.name || participantUser.username || (participantUser.email ? participantUser.email.split('@')[0] : 'Student Participant');
                     const regNo = participantUser.registrationNumber || 'N/A';
@@ -91,7 +98,7 @@ export default function ParticipantsTab({
 
                     return (
                       <tr key={reg.id}>
-                        <td>#{reg.id}</td>
+                        <td>{index + 1}</td>
                         <td><span className="badge badge-info" style={{ position: 'static' }}>{regNo}</span></td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

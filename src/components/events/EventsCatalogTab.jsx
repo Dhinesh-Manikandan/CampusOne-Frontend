@@ -19,6 +19,8 @@ export default function EventsCatalogTab({
   loadParticipants,
   loadAnnouncements
 }) {
+  const [searchInput, setSearchInput] = React.useState(catalogSearch || '');
+
   return (
     <div>
       <div className="catalog-toolbar glass-card" style={{ marginBottom: '20px', padding: '16px 20px', display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -26,9 +28,15 @@ export default function EventsCatalogTab({
           <i className="fa-solid fa-magnifying-glass"></i>
           <input 
             type="text" 
-            placeholder="Search events by title, venue, or category..." 
-            value={catalogSearch} 
-            onChange={e => setCatalogSearch(e.target.value)} 
+            placeholder="Search events (press Enter)..." 
+            value={searchInput} 
+            onChange={e => {
+              setSearchInput(e.target.value);
+              if (!e.target.value.trim()) setCatalogSearch('');
+            }}
+            onKeyDown={e => {
+              if (e.key === 'Enter') setCatalogSearch(searchInput);
+            }}
           />
         </div>
 

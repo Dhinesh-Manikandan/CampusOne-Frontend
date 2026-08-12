@@ -40,7 +40,7 @@ export default function AnnouncementsTab({
           >
             <option value="">-- Choose an event --</option>
             {adminEvents.map(e => (
-              <option key={e.id} value={e.id}>{e.title} (ID: #{e.id})</option>
+              <option key={e.id} value={e.id}>{e.title}</option>
             ))}
           </select>
         </div>

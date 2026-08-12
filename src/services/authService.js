@@ -40,6 +40,28 @@ export const authService = {
   },
 
   /**
+   * Update profile information
+   * @param {Object} data - { fullName, department, year, phoneNumber }
+   */
+  async updateProfile(data) {
+    const payload = {
+      fullName: data.fullName.trim(),
+      department: data.department.trim(),
+      year: parseInt(data.year, 10),
+      phoneNumber: data.phoneNumber.trim(),
+    };
+    return await apiClient.put('/user/profile', payload);
+  },
+
+  /**
+   * Change current password
+   * @param {Object} data - { currentPassword, newPassword }
+   */
+  async changePassword(data) {
+    return await apiClient.put('/user/change-password', data);
+  },
+
+  /**
    * Refresh JWT token
    * @param {string} refreshToken
    */

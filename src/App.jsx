@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import './styles.css';
 import { AuthPage } from './pages/Auth/AuthPage';
 import Header from './components/events/Header';
@@ -13,14 +14,47 @@ import EventDetailsModal from './components/modals/EventDetailsModal';
 import Toast from './components/common/Toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { Dashboard } from './pages/Dashboard/Dashboard';
+import { AppAdminRequestsPage } from './pages/Admin/AppAdminRequestsPage';
+import { AppAdminsManagementPage } from './pages/Admin/AppAdminsManagementPage';
+import { Profile } from './pages/Profile/Profile';
+import { apiClient } from './services/apiClient';
 
 function MainApp() {
   const { user: authUser, token: authToken, logout: authLogout } = useAuth();
-  const [token, setToken] = useState(() => authToken || localStorage.getItem('campusone_token') || localStorage.getItem('token') || '');
+  const [token, setToken] = useState(() => authToken || localStorage.getItem('gather_token') || '');
   const [user, setUser] = useState(authUser || null);
 
-  // App Navigation Tabs
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const userRole = (user?.role || authUser?.role || '').toUpperCase();
+  const isAppAdmin = userRole === 'APP_ADMIN' || (Array.isArray(user?.roles || authUser?.roles) && (user?.roles || authUser?.roles).some(r => (typeof r === 'string' ? r : r.roleName) === 'ROLE_APP_ADMIN' || r === 'APP_ADMIN'));
+  const isEventAdmin = isAppAdmin || userRole === 'EVENT_ADMIN' || (Array.isArray(user?.roles || authUser?.roles) && (user?.roles || authUser?.roles).some(r => (typeof r === 'string' ? r : r.roleName) === 'ROLE_EVENT_ADMIN' || r === 'EVENT_ADMIN'));
+
+  // App Navigation Tabs (Default: 'events' for students)
+  const [activeTab, setActiveTab] = useState(() => {
+    if (isAppAdmin) return 'admin_dashboard';
+    if (isEventAdmin) return 'my_events';
+    return 'events';
+  });
+
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const path = location.pathname;
+    if (path === '/admin-requests') setActiveTab(isAppAdmin ? 'admin_requests' : 'events');
+    else if (path === '/app-admins') setActiveTab(isAppAdmin ? 'app_admins' : 'events');
+    else if (path === '/profile') setActiveTab('profile');
+    else if (path === '/admin-dashboard') setActiveTab(isAppAdmin ? 'admin_dashboard' : 'events');
+    else if (path === '/events') setActiveTab('events');
+    else if (path === '/my-events') setActiveTab(isEventAdmin ? 'my_events' : 'events');
+    else if (path === '/participants') setActiveTab(isEventAdmin ? 'participants' : 'events');
+    else if (path === '/announcements') setActiveTab(isEventAdmin ? 'announcements' : 'events');
+    else if (path === '/') {
+      if (isAppAdmin) setActiveTab('admin_dashboard');
+      else if (isEventAdmin) setActiveTab('my_events');
+      else setActiveTab('events');
+    }
+  }, [location.pathname, isAppAdmin, isEventAdmin]);
 
   // Main Data States
   const [events, setEvents] = useState([]);
@@ -89,53 +123,69 @@ function MainApp() {
 
   // 1. Auth: Fetch or Decode Current User
   const getCurrentUser = async () => {
-    const activeToken = token || localStorage.getItem('campusone_token') || localStorage.getItem('token');
+    const activeToken = token || localStorage.getItem('gather_token');
     if (!activeToken) return null;
 
-    const jwtClaims = parseJwt(activeToken);
-    let jwtRole = 'STUDENT';
-    let jwtEmail = jwtClaims?.sub || '';
-    let jwtUserId = jwtClaims?.user_id || 1;
-
-    if (jwtClaims?.roles && Array.isArray(jwtClaims.roles) && jwtClaims.roles.length > 0) {
-      const firstRole = jwtClaims.roles[0];
-      jwtRole = typeof firstRole === 'string' ? firstRole.replace('ROLE_', '') : 'STUDENT';
-    }
-
-    try {
-      let res = await fetch('/api/auth/me', {
-        headers: { Authorization: `Bearer ${activeToken}` }
+    const extractRoleFromUser = (roles, fallback = 'STUDENT') => {
+      if (!roles) return fallback;
+      const list = Array.isArray(roles) ? roles : [roles];
+      const norm = list.map(r => {
+        if (typeof r === 'string') return r.replace('ROLE_', '');
+        if (r && typeof r === 'object') return (r.roleName || r.authority || r.name || '').replace('ROLE_', '');
+        return '';
       });
-      if (!res.ok) {
-        res = await fetch('/api/student/me', {
-          headers: { Authorization: `Bearer ${activeToken}` }
-        });
-      }
-      if (res.ok) {
-        const data = await res.json();
-        const rawRoles = data.roles || data.authorities || [];
-        let extractedRole = data.role;
-        if (!extractedRole && Array.isArray(rawRoles) && rawRoles.length > 0) {
-          const first = rawRoles[0];
-          extractedRole = typeof first === 'string' ? first : (first.roleName || first.authority || first.name);
-        }
-        if (extractedRole && extractedRole.startsWith('ROLE_')) {
-          extractedRole = extractedRole.replace('ROLE_', '');
-        }
+      if (norm.includes('APP_ADMIN')) return 'APP_ADMIN';
+      if (norm.includes('EVENT_ADMIN')) return 'EVENT_ADMIN';
+      if (norm.includes('STUDENT')) return 'STUDENT';
+      return norm[0] || fallback;
+    };
 
+    // 1. Try fetching fresh profile from GET /api/student/me
+    try {
+      const res = await apiClient.fetchWithAuth('/api/student/me').catch(() => null);
+      if (res && res.ok) {
+        const data = await res.json();
+        const primaryRole = extractRoleFromUser(data.roles || data.role);
         const normalized = {
           ...data,
-          email: data.email || jwtEmail,
-          name: data.fullName || data.name || data.username || (jwtEmail ? jwtEmail.split('@')[0] : 'Campus User'),
-          role: extractedRole || jwtRole,
-          id: data.id || data.userId || jwtUserId
+          email: data.email || '',
+          name: data.fullName || data.name || (data.email ? data.email.split('@')[0] : 'Campus User'),
+          role: primaryRole,
+          id: data.id || data.userId || null
         };
         setUser(normalized);
+        localStorage.setItem('gather_user', JSON.stringify(normalized));
         return normalized;
       }
     } catch (e) {
-      console.error('Error fetching current user:', e);
+      console.warn('getCurrentUser /api/student/me failed:', e);
     }
+
+    // 2. Try stored user object from localStorage
+    const storedUserRaw = localStorage.getItem('gather_user');
+    if (storedUserRaw) {
+      try {
+        const storedUser = JSON.parse(storedUserRaw);
+        const primaryRole = extractRoleFromUser(storedUser.roles || storedUser.role);
+        const normalized = {
+          ...storedUser,
+          email: storedUser.email || storedUser.principal || '',
+          name: storedUser.fullName || storedUser.name || (storedUser.email ? storedUser.email.split('@')[0] : 'Campus User'),
+          role: primaryRole,
+          id: storedUser.id || storedUser.userId || null,
+        };
+        setUser(normalized);
+        return normalized;
+      } catch (e) {
+        // Fall through to JWT decode
+      }
+    }
+
+    // 3. Fallback: decode JWT claims
+    const jwtClaims = parseJwt(activeToken);
+    const jwtEmail = jwtClaims?.sub || '';
+    const jwtUserId = jwtClaims?.user_id || 1;
+    const jwtRole = extractRoleFromUser(jwtClaims?.roles, 'STUDENT');
 
     const decodedUser = {
       email: jwtEmail,
@@ -149,11 +199,8 @@ function MainApp() {
 
   // 2. Fetch Events
   const loadEvents = async () => {
-    const activeToken = token || localStorage.getItem('campusone_token') || localStorage.getItem('token');
     try {
-      const res = await fetch('/api/events', {
-        headers: activeToken ? { Authorization: `Bearer ${activeToken}` } : {}
-      });
+      const res = await apiClient.fetchWithAuth('/api/events');
       if (res.ok) {
         const data = await res.json();
         setEvents(data);
@@ -166,12 +213,9 @@ function MainApp() {
 
   // 3. Fetch Dashboard Summary
   const loadDashboardSummary = async (userId) => {
-    if (!token) return;
     try {
       const targetId = userId || user?.id || 1;
-      const res = await fetch(`/api/events/admin/${targetId}/dashboard`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await apiClient.fetchWithAuth(`/api/events/admin/${targetId}/dashboard`);
       if (res.ok) {
         const data = await res.json();
         setDashboardSummary(data);
@@ -191,12 +235,9 @@ function MainApp() {
 
   // 4. Fetch Participant Count
   const loadParticipantCount = async (eventId) => {
-    const activeToken = token || localStorage.getItem('campusone_token') || localStorage.getItem('token');
-    if (!activeToken || !eventId) return;
+    if (!eventId) return;
     try {
-      const res = await fetch(`/api/events/${eventId}/participants/count`, {
-        headers: { Authorization: `Bearer ${activeToken}` }
-      });
+      const res = await apiClient.fetchWithAuth(`/api/events/${eventId}/participants/count`);
       if (res.ok) {
         const count = await res.json();
         setParticipantCountMap(prev => ({ ...prev, [eventId]: count }));
@@ -208,12 +249,9 @@ function MainApp() {
 
   // 5. View Event Details
   const viewEventDetails = async (eventId) => {
-    const activeToken = token || localStorage.getItem('campusone_token') || localStorage.getItem('token');
-    if (!activeToken || !eventId) return;
+    if (!eventId) return;
     try {
-      const res = await fetch(`/api/events/${eventId}`, {
-        headers: { Authorization: `Bearer ${activeToken}` }
-      });
+      const res = await apiClient.fetchWithAuth(`/api/events/${eventId}`);
       if (res.ok) {
         const data = await res.json();
         setSelectedEventDetails(data);
@@ -227,16 +265,13 @@ function MainApp() {
 
   // 6. Fetch Participants
   const loadParticipants = async (eventId, searchKeyword = '') => {
-    const activeToken = token || localStorage.getItem('campusone_token') || localStorage.getItem('token');
-    if (!activeToken || !eventId) return;
+    if (!eventId) return;
     try {
       const url = searchKeyword.trim()
         ? `/api/events/${eventId}/participants?search=${encodeURIComponent(searchKeyword)}`
         : `/api/events/${eventId}/participants`;
 
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${activeToken}` }
-      });
+      const res = await apiClient.fetchWithAuth(url);
       if (res.ok) {
         const data = await res.json();
         setParticipants(data);
@@ -254,12 +289,9 @@ function MainApp() {
 
   // 7. Fetch Announcements
   const loadAnnouncements = async (eventId) => {
-    const activeToken = token || localStorage.getItem('campusone_token') || localStorage.getItem('token');
-    if (!activeToken || !eventId) return;
+    if (!eventId) return;
     try {
-      const res = await fetch(`/api/announcements/event/${eventId}`, {
-        headers: { Authorization: `Bearer ${activeToken}` }
-      });
+      const res = await apiClient.fetchWithAuth(`/api/announcements/event/${eventId}`);
       if (res.ok) {
         const data = await res.json();
         setAnnouncements(data);
@@ -270,7 +302,7 @@ function MainApp() {
   };
 
   useEffect(() => {
-    const activeToken = token || localStorage.getItem('campusone_token') || localStorage.getItem('token');
+    const activeToken = token || localStorage.getItem('gather_token');
     if (activeToken) {
       setToken(activeToken);
       getCurrentUser().then(userData => {
@@ -284,7 +316,7 @@ function MainApp() {
 
   // Auth Handler
   const handleLoginSuccess = (loginData) => {
-    const receivedToken = loginData?.token || localStorage.getItem('campusone_token') || localStorage.getItem('token');
+    const receivedToken = loginData?.token || localStorage.getItem('gather_token');
     setToken(receivedToken);
     getCurrentUser().then(u => {
       loadEvents();
@@ -310,12 +342,8 @@ function MainApp() {
     const method = isEdit ? 'PUT' : 'POST';
 
     try {
-      const res = await fetch(url, {
+      const res = await apiClient.fetchWithAuth(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
         body: JSON.stringify(payload)
       });
 
@@ -339,9 +367,8 @@ function MainApp() {
     if (!token || !window.confirm('Are you sure you want to delete this event?')) return;
 
     try {
-      const res = await fetch(`/api/events/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await apiClient.fetchWithAuth(`/api/events/${id}`, {
+        method: 'DELETE'
       });
       if (res.ok) {
         showToast('Event deleted successfully');
@@ -359,12 +386,8 @@ function MainApp() {
   const handleRegister = async (eventId) => {
     if (!token || !user) return;
     try {
-      const res = await fetch(`/api/events/${eventId}/register`, {
+      const res = await apiClient.fetchWithAuth(`/api/events/${eventId}/register`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
         body: JSON.stringify({ userId: user.id })
       });
       if (res.ok) {
@@ -386,9 +409,8 @@ function MainApp() {
     if (!window.confirm(`Are you sure you want to remove ${participantName} from this event?`)) return;
 
     try {
-      const res = await fetch(`/api/events/${eventId}/register/${userId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await apiClient.fetchWithAuth(`/api/events/${eventId}/register/${userId}`, {
+        method: 'DELETE'
       });
       if (res.ok) {
         showToast(`Removed ${participantName} from event`);
@@ -415,17 +437,14 @@ function MainApp() {
 
     const payload = {
       ...announcementForm,
-      eventId: selectedEventId,
+      eventId: Number(selectedEventId),
+      createdBy: user?.id || 1,
       postedBy: user?.id || 1
     };
 
     try {
-      const res = await fetch(url, {
+      const res = await apiClient.fetchWithAuth(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
         body: JSON.stringify(payload)
       });
       if (res.ok) {
@@ -445,9 +464,8 @@ function MainApp() {
   const handleDeleteAnnouncement = async (id) => {
     if (!token || !window.confirm('Delete this announcement?')) return;
     try {
-      const res = await fetch(`/api/announcements/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await apiClient.fetchWithAuth(`/api/announcements/${id}`, {
+        method: 'DELETE'
       });
       if (res.ok) {
         showToast('Announcement deleted');
@@ -518,10 +536,9 @@ function MainApp() {
 
   const logout = () => {
     if (authLogout) authLogout();
+    // AuthContext.logout() already removes gather_* keys;
+    // clear any remaining legacy keys here just in case
     localStorage.removeItem('token');
-    localStorage.removeItem('campusone_token');
-    localStorage.removeItem('campusone_refresh_token');
-    localStorage.removeItem('campusone_user');
     setToken('');
     setUser(null);
     setEvents([]);
@@ -581,6 +598,8 @@ function MainApp() {
               setActiveTab={setActiveTab}
             />
           )}
+
+          {activeTab === 'admin_dashboard' && <Dashboard />}
 
           {activeTab === 'events' && (
             <EventsCatalogTab 
@@ -652,6 +671,10 @@ function MainApp() {
               handleDeleteAnnouncement={handleDeleteAnnouncement}
             />
           )}
+
+          {activeTab === 'admin_requests' && <AppAdminRequestsPage />}
+          {activeTab === 'app_admins' && <AppAdminsManagementPage />}
+          {activeTab === 'profile' && <Profile />}
         </main>
       </div>
 
