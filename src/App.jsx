@@ -7,6 +7,7 @@ import SidebarNav from './components/events/SidebarNav';
 import DashboardTab from './components/events/DashboardTab';
 import EventsCatalogTab from './components/events/EventsCatalogTab';
 import MyEventsTab from './components/events/MyEventsTab';
+import StudentRegisteredEventsTab from './components/events/StudentRegisteredEventsTab';
 import ParticipantsTab from './components/events/ParticipantsTab';
 import AnnouncementsTab from './components/events/AnnouncementsTab';
 import EventModal from './components/modals/EventModal';
@@ -58,6 +59,7 @@ function MainApp() {
 
   // Main Data States
   const [events, setEvents] = useState([]);
+  const [userRegistrations, setUserRegistrations] = useState([]);
   const [dashboardSummary, setDashboardSummary] = useState(null);
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [participants, setParticipants] = useState([]);
@@ -301,6 +303,24 @@ function MainApp() {
     }
   };
 
+  // 8. Fetch User Registrations (For Student View & Preventing Duplicate Registrations)
+  const loadUserRegistrations = async (targetUserId) => {
+    const activeToken = token || localStorage.getItem('campusone_token') || localStorage.getItem('token');
+    const uid = targetUserId || user?.id;
+    if (!activeToken || !uid) return;
+    try {
+      const res = await fetch(`/api/events/user/${uid}/registrations`, {
+        headers: { Authorization: `Bearer ${activeToken}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUserRegistrations(data);
+      }
+    } catch (e) {
+      console.error('Error loading student registrations:', e);
+    }
+  };
+
   useEffect(() => {
     const activeToken = token || localStorage.getItem('gather_token');
     if (activeToken) {
@@ -309,6 +329,7 @@ function MainApp() {
         loadEvents();
         if (userData?.id) {
           loadDashboardSummary(userData.id);
+          loadUserRegistrations(userData.id);
         }
       });
     }
@@ -320,7 +341,10 @@ function MainApp() {
     setToken(receivedToken);
     getCurrentUser().then(u => {
       loadEvents();
-      if (u?.id) loadDashboardSummary(u.id);
+      if (u?.id) {
+        loadDashboardSummary(u.id);
+        loadUserRegistrations(u.id);
+      }
       showToast(`Welcome back, ${u?.name || 'User'}!`);
     });
   };
@@ -394,6 +418,7 @@ function MainApp() {
         showToast('Successfully registered for the event!');
         loadEvents();
         loadParticipantCount(eventId);
+        if (user?.id) loadUserRegistrations(user.id);
       } else {
         const err = await res.json().catch(() => ({}));
         showToast(err.message || 'Registration failed', 'error');
@@ -417,6 +442,7 @@ function MainApp() {
         loadParticipants(eventId, participantSearch);
         loadEvents();
         loadParticipantCount(eventId);
+        if (user?.id) loadUserRegistrations(user.id);
       } else {
         const err = await res.json().catch(() => ({}));
         showToast(err.message || 'Failed to cancel registration', 'error');
@@ -560,6 +586,8 @@ function MainApp() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const toggleSidebar = () => setIsSidebarOpen(prev => !prev);
 
+  const registeredEventIds = new Set(userRegistrations.map(r => r.event?.id || r.eventId));
+
   if (!token && !user) {
     return <AuthPage onLoginSuccess={handleLoginSuccess} />;
   }
@@ -574,6 +602,7 @@ function MainApp() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         events={events}
+        userRegistrations={userRegistrations}
         user={user}
         logout={logout}
       />
@@ -611,6 +640,7 @@ function MainApp() {
               user={user}
               participantCountMap={participantCountMap}
               isEventCreator={isEventCreator}
+              registeredEventIds={registeredEventIds}
               viewEventDetails={viewEventDetails}
               handleRegister={handleRegister}
               openEditEventModal={openEditEventModal}
@@ -619,6 +649,16 @@ function MainApp() {
               setActiveTab={setActiveTab}
               loadParticipants={loadParticipants}
               loadAnnouncements={loadAnnouncements}
+            />
+          )}
+
+          {activeTab === 'my_registered_events' && (
+            <StudentRegisteredEventsTab 
+              userRegistrations={userRegistrations}
+              events={events}
+              handleCancelRegistration={handleCancelRegistration}
+              setActiveTab={setActiveTab}
+              viewEventDetails={viewEventDetails}
             />
           )}
 

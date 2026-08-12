@@ -10,6 +10,7 @@ export default function EventsCatalogTab({
   user,
   participantCountMap,
   isEventCreator,
+  registeredEventIds = new Set(),
   viewEventDetails,
   handleRegister,
   openEditEventModal,
@@ -67,6 +68,7 @@ export default function EventsCatalogTab({
               user={user}
               participantCountMap={participantCountMap}
               isEventCreator={isEventCreator}
+              registeredEventIds={registeredEventIds}
               viewEventDetails={viewEventDetails}
               handleRegister={handleRegister}
               openEditEventModal={openEditEventModal}
