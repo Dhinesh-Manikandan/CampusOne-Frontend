@@ -305,7 +305,7 @@ function MainApp() {
 
   // 8. Fetch User Registrations (For Student View & Preventing Duplicate Registrations)
   const loadUserRegistrations = async (targetUserId) => {
-    const activeToken = token || localStorage.getItem('campusone_token') || localStorage.getItem('token');
+    const activeToken = token || localStorage.getItem('gather_token') || localStorage.getItem('token');
     const uid = targetUserId || user?.id;
     if (!activeToken || !uid) return;
     try {
