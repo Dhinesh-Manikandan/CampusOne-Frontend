@@ -1,15 +1,21 @@
 import React from 'react';
+import { formatRole, formatRoleClass } from '../../utils/formatRole';
 
 export default function SidebarNav({
   isSidebarOpen,
   toggleSidebar,
   activeTab,
   setActiveTab,
-  events,
+  events = [],
   user,
   logout
 }) {
-  const myEventsCount = events.filter(e => String(e.createdBy) === String(user?.id)).length;
+  const safeEvents = Array.isArray(events) ? events : [];
+  const myEventsCount = safeEvents.filter(e => String(e.createdBy) === String(user?.id)).length;
+
+  const userRole = (user?.role || '').toUpperCase();
+  const isAppAdmin = userRole === 'APP_ADMIN' || (Array.isArray(user?.roles) && user.roles.some(r => (typeof r === 'string' ? r : r.roleName) === 'ROLE_APP_ADMIN' || r === 'APP_ADMIN'));
+  const isEventAdmin = isAppAdmin || userRole === 'EVENT_ADMIN' || (Array.isArray(user?.roles) && user.roles.some(r => (typeof r === 'string' ? r : r.roleName) === 'ROLE_EVENT_ADMIN' || r === 'EVENT_ADMIN'));
 
   return (
     <aside className={`official-sidebar ${isSidebarOpen ? '' : 'collapsed'}`}>
@@ -20,13 +26,13 @@ export default function SidebarNav({
         </div>
         {isSidebarOpen && (
           <div>
-            <div className="brand-title">CampusOne</div>
-            <div className="brand-subtitle">Official Management Portal</div>
+            <div className="brand-title">Gather</div>
+            <div className="brand-subtitle">Campus Event Management Platform</div>
           </div>
         )}
-        <button 
+        <button
           type="button"
-          className="btn btn-secondary btn-sm sidebar-toggle-btn" 
+          className="btn btn-secondary btn-sm sidebar-toggle-btn"
           onClick={toggleSidebar}
           title={isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
           style={{ marginLeft: isSidebarOpen ? 'auto' : '0', padding: '6px 10px' }}
@@ -37,8 +43,73 @@ export default function SidebarNav({
 
       {/* Categorized Navigation Groups */}
       <div className="sidebar-nav-scroll">
-        {isSidebarOpen && <div className="nav-group-label">OVERVIEW</div>}
+        {/* 1. APP ADMIN SECTION - Visible to App Admins Only */}
+        {isAppAdmin && (
+          <>
+            {isSidebarOpen && <div className="nav-group-label">APP ADMIN SECTION</div>}
+            <button
+              type="button"
+              className={`sidebar-nav-item ${activeTab === 'admin_dashboard' ? 'active' : ''}`}
+              onClick={() => setActiveTab('admin_dashboard')}
+              title="Admin Core Overview"
+            >
+              <i className="fa-solid fa-gauge-high"></i>
+              {isSidebarOpen && <span>Admin Overview</span>}
+            </button>
+
+            <button
+              type="button"
+              className={`sidebar-nav-item ${activeTab === 'app_admins' ? 'active' : ''}`}
+              onClick={() => setActiveTab('app_admins')}
+              title="App Admin Management"
+            >
+              <i className="fa-solid fa-shield-halved"></i>
+              {isSidebarOpen && <span>App Admin Management</span>}
+            </button>
+          </>
+        )}
+
+        {/* 2. EVENT ADMIN SECTION - Visible to Event Admins & App Admins */}
+        {isEventAdmin && (
+          <>
+            {isSidebarOpen && <div className="nav-group-label">EVENT ADMIN SECTION</div>}
+            <button
+              type="button"
+              className={`sidebar-nav-item ${activeTab === 'my_events' ? 'active' : ''}`}
+              onClick={() => setActiveTab('my_events')}
+              title="My Created Events"
+            >
+              <i className="fa-solid fa-folder-open"></i>
+              {isSidebarOpen && <span>My Created Events</span>}
+              {isSidebarOpen && myEventsCount > 0 && <span className="nav-badge primary">{myEventsCount}</span>}
+            </button>
+
+            <button
+              type="button"
+              className={`sidebar-nav-item ${activeTab === 'participants' ? 'active' : ''}`}
+              onClick={() => setActiveTab('participants')}
+              title="Participant Manager"
+            >
+              <i className="fa-solid fa-users"></i>
+              {isSidebarOpen && <span>Participant Manager</span>}
+            </button>
+
+            <button
+              type="button"
+              className={`sidebar-nav-item ${activeTab === 'announcements' ? 'active' : ''}`}
+              onClick={() => setActiveTab('announcements')}
+              title="Noticeboard & Alerts"
+            >
+              <i className="fa-solid fa-bullhorn"></i>
+              {isSidebarOpen && <span>Noticeboard & Alerts</span>}
+            </button>
+          </>
+        )}
+
+        {/* 3. NORMAL USER SECTION - Visible to All Roles (Students, Event Admins, App Admins) */}
+        {isSidebarOpen && <div className="nav-group-label">USER SECTION</div>}
         <button
+          type="button"
           className={`sidebar-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
           onClick={() => setActiveTab('dashboard')}
           title="Dashboard Summary"
@@ -47,65 +118,64 @@ export default function SidebarNav({
           {isSidebarOpen && <span>Dashboard Summary</span>}
         </button>
 
-        {isSidebarOpen && <div className="nav-group-label">EVENT HUB</div>}
         <button
+          type="button"
           className={`sidebar-nav-item ${activeTab === 'events' ? 'active' : ''}`}
           onClick={() => setActiveTab('events')}
           title="All Campus Events"
         >
           <i className="fa-solid fa-calendar-days"></i>
           {isSidebarOpen && <span>All Campus Events</span>}
-          {isSidebarOpen && <span className="nav-badge">{events.length}</span>}
-        </button>
-
-        <button
-          className={`sidebar-nav-item ${activeTab === 'my_events' ? 'active' : ''}`}
-          onClick={() => setActiveTab('my_events')}
-          title="My Created Events"
-        >
-          <i className="fa-solid fa-folder-open"></i>
-          {isSidebarOpen && <span>My Created Events</span>}
-          {isSidebarOpen && myEventsCount > 0 && <span className="nav-badge primary">{myEventsCount}</span>}
-        </button>
-
-        {isSidebarOpen && <div className="nav-group-label">ADMINISTRATION</div>}
-        <button
-          className={`sidebar-nav-item ${activeTab === 'participants' ? 'active' : ''}`}
-          onClick={() => setActiveTab('participants')}
-          title="Participant Manager"
-        >
-          <i className="fa-solid fa-users"></i>
-          {isSidebarOpen && <span>Participant Manager</span>}
-        </button>
-
-        <button
-          className={`sidebar-nav-item ${activeTab === 'announcements' ? 'active' : ''}`}
-          onClick={() => setActiveTab('announcements')}
-          title="Noticeboard & Alerts"
-        >
-          <i className="fa-solid fa-bullhorn"></i>
-          {isSidebarOpen && <span>Noticeboard & Alerts</span>}
+          {isSidebarOpen && <span className="nav-badge">{safeEvents.length}</span>}
         </button>
       </div>
 
-      {/* User Footer & Logout */}
+      {/* 4. STICKY BOTTOM PROFILE SECTION (Common to All 3 Roles) */}
       {user && (
-        <div className="sidebar-user-footer">
-          <div className="user-profile-badge" style={{ padding: 0, background: 'none', border: 'none', boxShadow: 'none', width: '100%', justifyContent: isSidebarOpen ? 'flex-start' : 'center' }}>
+        <div className="sidebar-user-footer" style={{ position: 'sticky', bottom: 0, background: 'var(--bg-surface)', zIndex: 10, paddingTop: '14px' }}>
+          <div
+            className={`sidebar-profile-card ${activeTab === 'profile' ? 'active-profile' : ''}`}
+            onClick={() => setActiveTab('profile')}
+            title="View Student Profile"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              width: '100%',
+              padding: '10px 12px',
+              borderRadius: 'var(--radius-md)',
+              background: activeTab === 'profile' ? '#D97757' : 'rgba(255, 255, 255, 0.04)',
+              border: activeTab === 'profile' ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid var(--border-subtle)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              color: activeTab === 'profile' ? '#ffffff' : 'var(--text-primary)'
+            }}
+          >
             <div className="avatar-circle" style={{ flexShrink: 0 }} title={user.name || user.email}>
               {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
             </div>
             {isSidebarOpen && (
               <div className="user-info" style={{ flex: 1, minWidth: 0 }}>
-                <div className="user-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.name}</div>
-                <div className={`role-pill ${user.role?.toLowerCase()}`} style={{ display: 'inline-flex' }}>
-                  <i className="fa-solid fa-shield-halved"></i> {user.role}
+                <div className="user-name" style={{ fontWeight: 600, fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {user.name || user.fullName || 'User Profile'}
+                </div>
+                <div className={`role-pill ${formatRoleClass(user.role)}`} style={{ display: 'inline-flex', fontSize: '10px' }}>
+                  <i className="fa-solid fa-shield-halved"></i> {formatRole(user.role || 'STUDENT')}
                 </div>
               </div>
             )}
             {isSidebarOpen && (
-              <button className="btn btn-secondary btn-sm" onClick={logout} title="Logout" style={{ padding: '8px 10px', flexShrink: 0 }}>
-                <i className="fa-solid fa-right-from-bracket" style={{ color: '#f43f5e' }}></i>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  logout();
+                }}
+                title="Logout"
+                style={{ padding: '6px 8px', flexShrink: 0, marginLeft: 'auto' }}
+              >
+                <i className="fa-solid fa-right-from-bracket" style={{ color: activeTab === 'profile' ? '#ffffff' : '#f43f5e' }}></i>
               </button>
             )}
           </div>

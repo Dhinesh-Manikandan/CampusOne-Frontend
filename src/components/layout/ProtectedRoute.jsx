@@ -18,7 +18,7 @@ export const ProtectedRoute = ({ children }) => {
         fontSize: '1.2rem',
         fontWeight: '600'
       }}>
-        Initializing CampusOne Session...
+        Initializing Gather Session...
       </div>
     );
   }

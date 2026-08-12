@@ -11,6 +11,14 @@ export const adminRequestService = {
   },
 
   /**
+   * Fetch my own submitted admin privilege requests
+   * API: GET /api/app-admin-requests/my
+   */
+  async getMyRequests() {
+    return await apiClient.get('/app-admin-requests/my');
+  },
+
+  /**
    * Fetch pending Event Admin requests (App Admin)
    * API: GET /api/admin/app-admin-requests?status=PENDING
    */

@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatRole } from '../../utils/formatRole';
 
 export default function DashboardTab({
   user,
@@ -34,7 +35,7 @@ export default function DashboardTab({
             Welcome back, {user?.name || user?.email || 'Campus User'}! 👋
           </h1>
           <p style={{ fontSize: '14px', opacity: 0.95 }}>
-            Logged in as <strong style={{ color: '#ffffff', textDecoration: 'underline' }}>{user?.email}</strong> • Role: <span style={{ background: 'rgba(255,255,255,0.25)', padding: '3px 12px', borderRadius: '12px', fontWeight: 700, letterSpacing: '0.5px' }}>{user?.role || 'STUDENT'}</span>
+            Logged in as <strong style={{ color: '#ffffff', textDecoration: 'underline' }}>{user?.email}</strong> • Role: <span style={{ background: 'rgba(255,255,255,0.25)', padding: '3px 12px', borderRadius: '12px', fontWeight: 700, letterSpacing: '0.5px' }}>{formatRole(user?.role || 'STUDENT')}</span>
           </p>
         </div>
         <div className="avatar-circle" style={{ width: '56px', height: '56px', fontSize: '24px', background: 'rgba(255,255,255,0.25)', border: '2px solid rgba(255,255,255,0.4)', boxShadow: '0 4px 15px rgba(0,0,0,0.2)', flexShrink: 0 }}>
