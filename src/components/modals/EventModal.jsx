@@ -11,6 +11,78 @@ export default function EventModal({
 }) {
   if (!showEventModal) return null;
 
+  const handleSubmitWithValidation = (e) => {
+    e.preventDefault();
+    const todayStr = new Date().toISOString().split('T')[0];
+    const nowTimeStr = new Date().toTimeString().slice(0, 5); // "HH:MM"
+
+    // 1. Title validation
+    if (!eventForm.title || eventForm.title.trim().length < 3) {
+      showToast('Event title must be at least 3 characters long', 'error');
+      return;
+    }
+
+    // 2. Description validation
+    if (!eventForm.description || eventForm.description.trim().length < 10) {
+      showToast('Event description must be at least 10 characters long', 'error');
+      return;
+    }
+
+    // 3. Venue validation
+    if (!eventForm.venue || !eventForm.venue.trim()) {
+      showToast('Venue / Location is required', 'error');
+      return;
+    }
+
+    // 4. Event Date validation (cannot be in the past)
+    if (!eventForm.eventDate) {
+      showToast('Event date is required', 'error');
+      return;
+    }
+    if (eventForm.eventDate < todayStr && !editingEvent) {
+      showToast('Event date cannot be in the past', 'error');
+      return;
+    }
+
+    // 5. Registration Deadline validation (must be on or before event date)
+    if (!eventForm.registrationDeadline) {
+      showToast('Registration deadline is required', 'error');
+      return;
+    }
+    if (eventForm.registrationDeadline > eventForm.eventDate) {
+      showToast('Registration deadline must be on or before the event date', 'error');
+      return;
+    }
+
+    // 6. Time validation (startTime < endTime)
+    if (eventForm.startTime && eventForm.endTime && eventForm.startTime >= eventForm.endTime) {
+      showToast('End time must be strictly after start time', 'error');
+      return;
+    }
+
+    // 7. Same day start time validation
+    if (eventForm.eventDate === todayStr && eventForm.startTime && eventForm.startTime < nowTimeStr && !editingEvent) {
+      showToast('Start time cannot be in the past for today’s event', 'error');
+      return;
+    }
+
+    // 8. Max capacity validation
+    const capacity = Number(eventForm.maxParticipants);
+    if (isNaN(capacity) || capacity < 1) {
+      showToast('Maximum capacity must be at least 1 participant', 'error');
+      return;
+    }
+
+    // 9. Banner Image URL format validation
+    if (eventForm.bannerImage && eventForm.bannerImage.trim() && !/^https?:\/\/.+/i.test(eventForm.bannerImage.trim())) {
+      showToast('Banner image URL must start with http:// or https://', 'error');
+      return;
+    }
+
+    // All validations passed! Proceed with API call
+    handleSaveEvent(e);
+  };
+
   return (
     <div className="modal-overlay">
       <div className="modal-content">
@@ -20,9 +92,9 @@ export default function EventModal({
             <i className="fa-solid fa-xmark"></i>
           </button>
         </div>
-        <form onSubmit={handleSaveEvent} className="form-grid">
+        <form onSubmit={handleSubmitWithValidation} className="form-grid">
           <div className="form-group full-width">
-            <label>Event Title</label>
+            <label>Event Title *</label>
             <input 
               type="text" 
               placeholder="e.g. Annual Tech Hackathon 2026" 
@@ -32,7 +104,7 @@ export default function EventModal({
             />
           </div>
           <div className="form-group">
-            <label>Category</label>
+            <label>Category *</label>
             <select value={eventForm.category} onChange={e => setEventForm({ ...eventForm, category: e.target.value })}>
               <option value="Technical">Technical</option>
               <option value="Cultural">Cultural</option>
@@ -42,7 +114,7 @@ export default function EventModal({
             </select>
           </div>
           <div className="form-group">
-            <label>Venue / Location</label>
+            <label>Venue / Location *</label>
             <input 
               type="text" 
               placeholder="e.g. Auditorium Hall A" 
@@ -52,7 +124,7 @@ export default function EventModal({
             />
           </div>
           <div className="form-group">
-            <label>Event Date</label>
+            <label>Event Date *</label>
             <input 
               type="date" 
               value={eventForm.eventDate} 
@@ -61,7 +133,7 @@ export default function EventModal({
             />
           </div>
           <div className="form-group">
-            <label>Registration Deadline</label>
+            <label>Registration Deadline * <span style={{ fontSize: '0.8em', color: 'var(--text-muted)' }}>(Before or on Event Date)</span></label>
             <input 
               type="date" 
               value={eventForm.registrationDeadline} 
@@ -70,7 +142,7 @@ export default function EventModal({
             />
           </div>
           <div className="form-group">
-            <label>Start Time</label>
+            <label>Start Time *</label>
             <input 
               type="time" 
               value={eventForm.startTime} 
@@ -79,7 +151,7 @@ export default function EventModal({
             />
           </div>
           <div className="form-group">
-            <label>End Time</label>
+            <label>End Time * <span style={{ fontSize: '0.8em', color: 'var(--text-muted)' }}>(After Start Time)</span></label>
             <input 
               type="time" 
               value={eventForm.endTime} 
@@ -88,9 +160,10 @@ export default function EventModal({
             />
           </div>
           <div className="form-group">
-            <label>Maximum Capacity</label>
+            <label>Maximum Capacity *</label>
             <input 
               type="number" 
+              min="1"
               value={eventForm.maxParticipants} 
               onChange={e => setEventForm({ ...eventForm, maxParticipants: e.target.value })} 
               required 
@@ -106,7 +179,7 @@ export default function EventModal({
             </select>
           </div>
           <div className="form-group full-width">
-            <label>Banner Image URL</label>
+            <label>Banner Image URL <span style={{ fontSize: '0.8em', color: 'var(--text-muted)' }}>(Optional, must start with http:// or https://)</span></label>
             <input 
               type="text" 
               placeholder="https://images.unsplash.com/..." 
@@ -115,7 +188,7 @@ export default function EventModal({
             />
           </div>
           <div className="form-group full-width">
-            <label>Description</label>
+            <label>Description * <span style={{ fontSize: '0.8em', color: 'var(--text-muted)' }}>(Minimum 10 characters)</span></label>
             <textarea 
               rows="3" 
               placeholder="Detailed description of event schedule and guidelines..." 
