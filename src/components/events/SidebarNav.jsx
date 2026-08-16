@@ -103,6 +103,16 @@ export default function SidebarNav({
               <i className="fa-solid fa-shield-halved"></i>
               {isSidebarOpen && <span>App Admin Management</span>}
             </button>
+
+            <button
+              type="button"
+              className={`sidebar-nav-item ${activeTab === 'admin_requests' ? 'active' : ''}`}
+              onClick={() => setActiveTab('admin_requests')}
+              title="Admin Role Requests"
+            >
+              <i className="fa-solid fa-user-shield"></i>
+              {isSidebarOpen && <span>Role Requests</span>}
+            </button>
           </>
         )}
 

@@ -2,16 +2,30 @@ import { apiClient } from './apiClient';
 
 export const adminRequestService = {
   /**
-   * Submit an Event Admin request (Student)
+   * Submit an App Admin request
    * API: POST /api/app-admin-requests
-   * Payload: { requestReason }
    */
-  async submitRequest(requestReason) {
+  async submitAppAdminRequest(requestReason) {
     return await apiClient.post('/app-admin-requests', { requestReason });
   },
 
   /**
-   * Fetch my own submitted admin privilege requests
+   * Alias for backwards compatibility
+   */
+  async submitRequest(requestReason) {
+    return await this.submitAppAdminRequest(requestReason);
+  },
+
+  /**
+   * Submit an Event Admin request
+   * API: POST /api/event-admin-requests
+   */
+  async submitEventAdminRequest(requestReason) {
+    return await apiClient.post('/event-admin-requests', { requestReason });
+  },
+
+  /**
+   * Fetch my own submitted App Admin privilege requests
    * API: GET /api/app-admin-requests/my
    */
   async getMyRequests() {
@@ -19,7 +33,15 @@ export const adminRequestService = {
   },
 
   /**
-   * Fetch pending Event Admin requests (App Admin)
+   * Fetch my own submitted Event Admin privilege requests
+   * API: GET /api/event-admin-requests/my
+   */
+  async getMyEventAdminRequests() {
+    return await apiClient.get('/event-admin-requests/my');
+  },
+
+  /**
+   * Fetch pending App Admin requests (App Admin)
    * API: GET /api/admin/app-admin-requests?status=PENDING
    */
   async getPendingRequests(status = 'PENDING') {
@@ -27,7 +49,15 @@ export const adminRequestService = {
   },
 
   /**
-   * Approve an Event Admin request
+   * Fetch pending Event Admin requests (App Admin)
+   * API: GET /api/admin/event-admin-requests?status=PENDING
+   */
+  async getPendingEventAdminRequests(status = 'PENDING') {
+    return await apiClient.get(`/admin/event-admin-requests?status=${status}`);
+  },
+
+  /**
+   * Approve an App Admin request
    * API: POST /api/admin/app-admin-requests/{id}/approve
    */
   async approveRequest(requestId) {
@@ -35,17 +65,31 @@ export const adminRequestService = {
   },
 
   /**
-   * Reject an Event Admin request
+   * Approve an Event Admin request
+   * API: POST /api/admin/event-admin-requests/{id}/approve
+   */
+  async approveEventAdminRequest(requestId) {
+    return await apiClient.post(`/admin/event-admin-requests/${requestId}/approve`, {});
+  },
+
+  /**
+   * Reject an App Admin request
    * API: POST /api/admin/app-admin-requests/{id}/reject
-   * Payload: { remarks }
    */
   async rejectRequest(requestId, remarks = '') {
     return await apiClient.post(`/admin/app-admin-requests/${requestId}/reject`, { remarks });
   },
 
   /**
+   * Reject an Event Admin request
+   * API: POST /api/admin/event-admin-requests/{id}/reject
+   */
+  async rejectEventAdminRequest(requestId, remarks = '') {
+    return await apiClient.post(`/admin/event-admin-requests/${requestId}/reject`, { remarks });
+  },
+
+  /**
    * View all Application Admins
-   * API: GET /api/admin/application-admins
    */
   async getApplicationAdmins() {
     return await apiClient.get('/admin/application-admins');
@@ -53,7 +97,6 @@ export const adminRequestService = {
 
   /**
    * Remove Application Admin
-   * API: DELETE /api/admin/application-admins/{id}
    */
   async removeApplicationAdmin(id) {
     return await apiClient.delete(`/admin/application-admins/${id}`);
