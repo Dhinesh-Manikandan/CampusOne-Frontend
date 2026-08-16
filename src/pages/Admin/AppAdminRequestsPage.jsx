@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { UserCheck, Check, X, ShieldAlert, AlertCircle, CheckCircle2, Filter, MessageSquare, Clock, Shield } from 'lucide-react';
 import { adminRequestService } from '../../services/adminRequestService';
 import { useAuth } from '../../context/AuthContext';
+import { formatDateDMY } from '../../utils/formatDate';
 import './AppAdminRequestsPage.css';
 
 export const AppAdminRequestsPage = () => {
@@ -183,7 +184,7 @@ export const AppAdminRequestsPage = () => {
                     <div>
                       <h4 style={{ fontSize: '1.05rem', fontWeight: 700 }}>{userName}</h4>
                       <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)' }}>
-                        {userEmail} • Reg No: <code>{userReg}</code> {userDept ? `• ${userDept}` : ''} {userYear ? `(${userYear})` : ''} {userPhone ? `• ${userPhone}` : ''}
+                        {userEmail} • Reg No: <code>{userReg}</code> {userDept ? `• ${userDept}` : ''} {userYear ? `(${userYear})` : ''} {userPhone ? `• ${userPhone}` : ''} • Submitted: {formatDateDMY(req.requestedAt)}
                       </p>
                     </div>
                     <span className={`badge ${req.status === 'PENDING' ? 'badge-warning' : req.status === 'APPROVED' ? 'badge-success' : 'badge-danger'}`}>

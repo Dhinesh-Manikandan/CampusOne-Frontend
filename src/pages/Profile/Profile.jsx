@@ -30,6 +30,7 @@ import { useAuth } from '../../context/AuthContext';
 import { authService } from '../../services/authService';
 import { adminRequestService } from '../../services/adminRequestService';
 import { formatRole, formatRoleClass } from '../../utils/formatRole';
+import { formatDateDMY } from '../../utils/formatDate';
 import './Profile.css';
 
 export const Profile = () => {
@@ -650,7 +651,7 @@ export const Profile = () => {
                           {req.roleLabel} Request
                         </span>
                         <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
-                          Submitted {req.requestedAt ? new Date(req.requestedAt).toLocaleDateString() : 'recently'}
+                          Submitted {req.requestedAt ? formatDateDMY(req.requestedAt) : 'recently'}
                         </span>
                       </div>
                       <span className={`badge ${req.status === 'PENDING' ? 'badge-warning' : req.status === 'APPROVED' ? 'badge-success' : 'badge-danger'}`}>
@@ -676,14 +677,14 @@ export const Profile = () => {
                           "{req.remarks || 'No specific remarks provided.'}"
                         </p>
                         <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block' }}>
-                          Reviewed & Rejected by Admin: <strong>{reviewerName}</strong> {reviewerEmail} {req.reviewedAt ? `on ${new Date(req.reviewedAt).toLocaleString()}` : ''}
+                          Reviewed & Rejected by Admin: <strong>{reviewerName}</strong> {reviewerEmail} {req.reviewedAt ? `on ${formatDateDMY(req.reviewedAt)}` : ''}
                         </span>
                       </div>
                     )}
 
                     {req.status === 'APPROVED' && (
                       <div style={{ marginTop: '0.5rem', fontSize: '0.825rem', color: '#10b981', fontWeight: 600 }}>
-                        ✓ Approved by Admin: <strong>{reviewerName}</strong> {reviewerEmail} {req.reviewedAt ? `on ${new Date(req.reviewedAt).toLocaleString()}` : ''}
+                        ✓ Approved by Admin: <strong>{reviewerName}</strong> {reviewerEmail} {req.reviewedAt ? `on ${formatDateDMY(req.reviewedAt)}` : ''}
                       </div>
                     )}
                   </div>
