@@ -7,13 +7,16 @@ export default function SidebarNav({
   activeTab,
   setActiveTab,
   events = [],
+  userRegistrations = [],
   user,
   logout
 }) {
   const safeEvents = Array.isArray(events) ? events : [];
   const myEventsCount = safeEvents.filter(e => String(e.createdBy) === String(user?.id)).length;
+  const registeredCount = userRegistrations.length;
 
   const userRole = (user?.role || '').toUpperCase();
+  const isStudent = userRole === 'STUDENT' || (Array.isArray(user?.roles) && user.roles.some(r => (typeof r === 'string' ? r : r.roleName) === 'ROLE_STUDENT'));
   const isAppAdmin = userRole === 'APP_ADMIN' || (Array.isArray(user?.roles) && user.roles.some(r => (typeof r === 'string' ? r : r.roleName) === 'ROLE_APP_ADMIN' || r === 'APP_ADMIN'));
   const isEventAdmin = isAppAdmin || userRole === 'EVENT_ADMIN' || (Array.isArray(user?.roles) && user.roles.some(r => (typeof r === 'string' ? r : r.roleName) === 'ROLE_EVENT_ADMIN' || r === 'EVENT_ADMIN'));
 
@@ -128,6 +131,32 @@ export default function SidebarNav({
           {isSidebarOpen && <span>All Campus Events</span>}
           {isSidebarOpen && <span className="nav-badge">{safeEvents.length}</span>}
         </button>
+
+        {/* Student View: My Registered Events */}
+        {isStudent && (
+          <button
+            type="button"
+            className={`sidebar-nav-item ${activeTab === 'my_registered_events' ? 'active' : ''}`}
+            onClick={() => setActiveTab('my_registered_events')}
+            title="My Registered Events"
+          >
+            <i className="fa-solid fa-ticket"></i>
+            {isSidebarOpen && <span>My Registered Events</span>}
+            {isSidebarOpen && registeredCount > 0 && <span className="nav-badge primary">{registeredCount}</span>}
+          </button>
+        )}
+
+        {!isEventAdmin && (
+          <button
+            type="button"
+            className={`sidebar-nav-item ${activeTab === 'announcements' ? 'active' : ''}`}
+            onClick={() => setActiveTab('announcements')}
+            title="Noticeboard & Alerts"
+          >
+            <i className="fa-solid fa-bullhorn"></i>
+            {isSidebarOpen && <span>Noticeboard & Alerts</span>}
+          </button>
+        )}
       </div>
 
       {/* 4. STICKY BOTTOM PROFILE SECTION (Common to All 3 Roles) */}

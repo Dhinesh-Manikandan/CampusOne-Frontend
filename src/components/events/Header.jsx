@@ -11,6 +11,7 @@ export default function Header({ user, logout, activeTab, isSidebarOpen, toggleS
       case 'admin_dashboard': return 'Core Platform & Admin Overview';
       case 'events': return 'All Campus Events Catalog';
       case 'my_events': return 'My Created Events Manager';
+      case 'my_registered_events': return 'My Registered Events Hub';
       case 'participants': return 'Participant Manager & Registrations';
       case 'announcements': return 'Noticeboard & Event Updates';
       case 'admin_requests': return 'App-Admin Request Management';

@@ -5,6 +5,7 @@ export default function EventCard({
   user,
   participantCountMap,
   isEventCreator,
+  registeredEventIds = new Set(),
   viewEventDetails,
   handleRegister,
   openEditEventModal,
@@ -17,6 +18,7 @@ export default function EventCard({
   const count = participantCountMap[event.id] ?? event.registeredCount ?? 0;
   const isFull = event.maxParticipants && count >= event.maxParticipants;
   const isCreator = isEventCreator(event);
+  const isRegistered = registeredEventIds?.has ? registeredEventIds.has(event.id) : Array.isArray(registeredEventIds) ? registeredEventIds.includes(event.id) : false;
 
   return (
     <div className="event-card">
@@ -53,16 +55,24 @@ export default function EventCard({
             <i className="fa-solid fa-circle-info"></i> Details
           </button>
 
+          {/* Student / Non-Creator Action Buttons */}
           {(!user || user.role === 'STUDENT') && (
-            <button 
-              className={`btn btn-sm ${isFull ? 'btn-secondary' : 'btn-primary'}`} 
-              disabled={isFull}
-              onClick={() => handleRegister(event.id)}
-            >
-              <i className="fa-solid fa-user-plus"></i> {isFull ? 'Event Full' : 'Register'}
-            </button>
+            isRegistered ? (
+              <button className="btn btn-sm btn-secondary" disabled style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.4)', opacity: 1, cursor: 'default' }}>
+                <i className="fa-solid fa-circle-check"></i> Registered
+              </button>
+            ) : (
+              <button 
+                className={`btn btn-sm ${isFull ? 'btn-secondary' : 'btn-primary'}`} 
+                disabled={isFull}
+                onClick={() => handleRegister(event.id)}
+              >
+                <i className="fa-solid fa-user-plus"></i> {isFull ? 'Event Full' : 'Register'}
+              </button>
+            )
           )}
 
+          {/* Admin Creator Action Buttons */}
           {isCreator && (
             <>
               <button className="btn btn-secondary btn-sm" onClick={() => openEditEventModal(event)}>

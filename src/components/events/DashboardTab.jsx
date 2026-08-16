@@ -8,6 +8,8 @@ export default function DashboardTab({
   openCreateEventModal,
   setActiveTab
 }) {
+  const isStudent = user?.role === 'STUDENT';
+
   return (
     <div>
       {/* Personalized Welcome Banner */}
@@ -29,7 +31,7 @@ export default function DashboardTab({
       >
         <div>
           <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, opacity: 0.9, marginBottom: '4px' }}>
-            Campus Analytics & Control Center
+            {isStudent ? 'Student Event Portal' : 'Campus Analytics & Control Center'}
           </div>
           <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '26px', fontWeight: 800, marginBottom: '6px' }}>
             Welcome back, {user?.name || user?.email || 'Campus User'}! 👋
@@ -90,19 +92,26 @@ export default function DashboardTab({
       <div className="glass-card" style={{ marginTop: '24px', padding: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '20px', marginBottom: '6px' }}>
-            Ready to Organize a Campus Event?
+            {isStudent ? 'Discover Upcoming Campus Events' : 'Ready to Organize a Campus Event?'}
           </h3>
           <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-            Publish workshops, technical hackathons, cultural fests, and track live student analytics.
+            {isStudent ? 'Enroll in hackathons, workshops, and cultural events happening across campus.' : 'Publish workshops, technical hackathons, cultural fests, and track live student analytics.'}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <button className="btn btn-primary" onClick={openCreateEventModal}>
-            <i className="fa-solid fa-plus"></i> Create New Event
-          </button>
-          <button className="btn btn-secondary" onClick={() => setActiveTab('events')}>
+          {!isStudent && (
+            <button className="btn btn-primary" onClick={openCreateEventModal}>
+              <i className="fa-solid fa-plus"></i> Create New Event
+            </button>
+          )}
+          <button className="btn btn-primary" onClick={() => setActiveTab('events')}>
             <i className="fa-solid fa-compass"></i> Explore Catalog
           </button>
+          {isStudent && (
+            <button className="btn btn-secondary" onClick={() => setActiveTab('my_registered_events')}>
+              <i className="fa-solid fa-ticket"></i> My Registered Events
+            </button>
+          )}
         </div>
       </div>
     </div>

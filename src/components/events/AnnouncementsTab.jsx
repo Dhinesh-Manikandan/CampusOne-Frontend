@@ -15,15 +15,20 @@ export default function AnnouncementsTab({
   openEditAnnouncement,
   handleDeleteAnnouncement
 }) {
-  const adminEvents = events.filter(
-    e => String(e.createdBy) === String(user?.id) || user?.role === 'ADMIN' || user?.role === 'APP_ADMIN' || user?.role === 'EVENT_ADMIN'
-  );
+  const isStudent = user?.role === 'STUDENT';
+  const availableEvents = isStudent
+    ? events
+    : events.filter(
+        e => String(e.createdBy) === String(user?.id) || user?.role === 'ADMIN' || user?.role === 'APP_ADMIN' || user?.role === 'EVENT_ADMIN'
+      );
 
   return (
     <div>
       <div style={{ marginBottom: '20px' }}>
         <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '24px' }}>Event Noticeboard & Announcements</h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Post broadcast updates and alerts for registered event participants</p>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+          {isStudent ? 'View official broadcast alerts and updates for campus events' : 'Post broadcast updates and alerts for registered event participants'}
+        </p>
       </div>
 
       {/* Select Event */}
@@ -39,72 +44,74 @@ export default function AnnouncementsTab({
             }}
           >
             <option value="">-- Choose an event --</option>
-            {adminEvents.map(e => (
-              <option key={e.id} value={e.id}>{e.title}</option>
+            {availableEvents.map(e => (
+              <option key={e.id} value={e.id}>{e.title} (ID: #{e.id})</option>
             ))}
           </select>
         </div>
       </div>
 
       {selectedEventId ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-          {/* Post Form */}
-          <div className="glass-card">
-            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', marginBottom: '16px' }}>
-              {editingAnnouncement ? 'Edit Announcement' : 'Post New Broadcast Update'}
-            </h3>
-            <form onSubmit={handleSaveAnnouncement} className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
-              <div className="form-group">
-                <label>Announcement Title</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. Venue Changed to Main Hall B" 
-                  value={announcementForm.title}
-                  onChange={e => setAnnouncementForm({ ...announcementForm, title: e.target.value })}
-                  required 
-                />
-              </div>
+        <div style={{ display: 'grid', gridTemplateColumns: isStudent ? '1fr' : '1fr 1fr', gap: '20px' }}>
+          {/* Post Form - Admin Only */}
+          {!isStudent && (
+            <div className="glass-card">
+              <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', marginBottom: '16px' }}>
+                {editingAnnouncement ? 'Edit Announcement' : 'Post New Broadcast Update'}
+              </h3>
+              <form onSubmit={handleSaveAnnouncement} className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
+                <div className="form-group">
+                  <label>Announcement Title</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Venue Changed to Main Hall B" 
+                    value={announcementForm.title}
+                    onChange={e => setAnnouncementForm({ ...announcementForm, title: e.target.value })}
+                    required 
+                  />
+                </div>
 
-              <div className="form-group">
-                <label>Priority Level</label>
-                <select 
-                  value={announcementForm.priority}
-                  onChange={e => setAnnouncementForm({ ...announcementForm, priority: e.target.value })}
-                >
-                  <option value="NORMAL">Normal Info</option>
-                  <option value="IMPORTANT">Important</option>
-                  <option value="URGENT">Urgent Alert</option>
-                </select>
-              </div>
+                <div className="form-group">
+                  <label>Priority Level</label>
+                  <select 
+                    value={announcementForm.priority}
+                    onChange={e => setAnnouncementForm({ ...announcementForm, priority: e.target.value })}
+                  >
+                    <option value="NORMAL">Normal Info</option>
+                    <option value="IMPORTANT">Important</option>
+                    <option value="URGENT">Urgent Alert</option>
+                  </select>
+                </div>
 
-              <div className="form-group">
-                <label>Message Content</label>
-                <textarea 
-                  rows="4" 
-                  placeholder="Write clear instructions for participants..." 
-                  value={announcementForm.content}
-                  onChange={e => setAnnouncementForm({ ...announcementForm, content: e.target.value })}
-                  required
-                />
-              </div>
+                <div className="form-group">
+                  <label>Message Content</label>
+                  <textarea 
+                    rows="4" 
+                    placeholder="Write clear instructions for participants..." 
+                    value={announcementForm.content}
+                    onChange={e => setAnnouncementForm({ ...announcementForm, content: e.target.value })}
+                    required
+                  />
+                </div>
 
-              <div className="btn-row" style={{ marginTop: '12px' }}>
-                <button type="submit" className="btn btn-primary">
-                  <i className="fa-solid fa-paper-plane"></i> {editingAnnouncement ? 'Save Update' : 'Broadcast Announcement'}
-                </button>
-                {editingAnnouncement && (
-                  <button type="button" className="btn btn-secondary" onClick={cancelEditAnnouncement}>
-                    Cancel
+                <div className="btn-row" style={{ marginTop: '12px' }}>
+                  <button type="submit" className="btn btn-primary">
+                    <i className="fa-solid fa-paper-plane"></i> {editingAnnouncement ? 'Save Update' : 'Broadcast Announcement'}
                   </button>
-                )}
-              </div>
-            </form>
-          </div>
+                  {editingAnnouncement && (
+                    <button type="button" className="btn btn-secondary" onClick={cancelEditAnnouncement}>
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+          )}
 
           {/* Announcements Feed */}
           <div className="glass-card">
             <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', marginBottom: '16px' }}>
-              Broadcast History ({announcements.length})
+              Noticeboard Feed ({announcements.length})
             </h3>
 
             {announcements.length === 0 ? (
@@ -135,14 +142,16 @@ export default function AnnouncementsTab({
                     </p>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: 'var(--text-muted)' }}>
                       <span>{item.postedAt ? new Date(item.postedAt).toLocaleString() : 'Just now'}</span>
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        <button className="btn btn-secondary btn-sm" style={{ padding: '2px 8px', fontSize: '11px' }} onClick={() => openEditAnnouncement(item)}>
-                          <i className="fa-solid fa-pen"></i> Edit
-                        </button>
-                        <button className="btn btn-danger btn-sm" style={{ padding: '2px 8px', fontSize: '11px' }} onClick={() => handleDeleteAnnouncement(item.id)}>
-                          <i className="fa-solid fa-trash"></i> Delete
-                        </button>
-                      </div>
+                      {!isStudent && (
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button className="btn btn-secondary btn-sm" style={{ padding: '2px 8px', fontSize: '11px' }} onClick={() => openEditAnnouncement(item)}>
+                            <i className="fa-solid fa-pen"></i> Edit
+                          </button>
+                          <button className="btn btn-danger btn-sm" style={{ padding: '2px 8px', fontSize: '11px' }} onClick={() => handleDeleteAnnouncement(item.id)}>
+                            <i className="fa-solid fa-trash"></i> Delete
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -153,7 +162,7 @@ export default function AnnouncementsTab({
       ) : (
         <div className="empty-state glass-card">
           <i className="fa-solid fa-arrow-up"></i>
-          <p>Please select an event from the dropdown list above to view or post announcements.</p>
+          <p>Please select an event from the dropdown list above to view noticeboard announcements.</p>
         </div>
       )}
     </div>
