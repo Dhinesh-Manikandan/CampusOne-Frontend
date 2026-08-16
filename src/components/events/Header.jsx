@@ -17,6 +17,7 @@ export default function Header({ user, logout, activeTab, isSidebarOpen, toggleS
       case 'admin_requests': return 'App-Admin Request Management';
       case 'app_admins': return 'Application Admin Management';
       case 'profile': return 'Student & User Profile';
+      case 'access_denied': return 'Access Restricted';
       default: return 'Gather Official Portal';
     }
   };
@@ -37,11 +38,11 @@ export default function Header({ user, logout, activeTab, isSidebarOpen, toggleS
           <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '20px', fontWeight: 700, margin: 0 }}>
             {getTabTitle()}
           </h2>
-          <div className="brand-subtitle">Gather Campus Event Management Platform</div>
+          <div className="brand-subtitle">Manage application admins, approve incoming privilege requests, and audit request logs.</div>
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         {/* Light / Dark Mode Toggle Button */}
         <button
           className="btn btn-secondary btn-sm header-theme-toggle-btn"
@@ -53,21 +54,23 @@ export default function Header({ user, logout, activeTab, isSidebarOpen, toggleS
           <span style={{ fontSize: '12px', fontWeight: 600, color: 'inherit' }}>{theme === 'light' ? 'Dark' : 'Light'}</span>
         </button>
 
+        {/* Logout Button */}
         {user && (
-          <div className="user-profile-badge">
-            <div className="avatar-circle">
-              {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
-            </div>
-            <div className="user-info">
-              <div className="user-name">{user.name}</div>
-              <div className={`role-pill ${formatRoleClass(user.role)}`}>
-                <i className="fa-solid fa-shield-halved"></i> {formatRole(user.role)}
-              </div>
-            </div>
-            <button className="btn btn-secondary btn-sm" onClick={logout} title="Logout">
-              <i className="fa-solid fa-right-from-bracket"></i>
-            </button>
-          </div>
+          <button
+            className="btn btn-sm"
+            onClick={logout}
+            title="Logout"
+            style={{
+              padding: '7px 12px',
+              background: 'rgba(225, 29, 72, 0.1)',
+              border: '1.5px solid rgba(225, 29, 72, 0.3)',
+              color: '#E11D48',
+              cursor: 'pointer',
+              borderRadius: '8px'
+            }}
+          >
+            <i className="fa-solid fa-right-from-bracket" style={{ fontSize: '13px', color: '#E11D48' }}></i>
+          </button>
         )}
       </div>
     </header>

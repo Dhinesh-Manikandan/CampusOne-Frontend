@@ -12,36 +12,70 @@ export default function SidebarNav({
   logout
 }) {
   const safeEvents = Array.isArray(events) ? events : [];
-  const myEventsCount = safeEvents.filter(e => String(e.createdBy) === String(user?.id)).length;
-  const registeredCount = userRegistrations.length;
+  const registeredCount = Array.isArray(userRegistrations) ? userRegistrations.length : 0;
 
-  const userRole = (user?.role || '').toUpperCase();
-  const isStudent = userRole === 'STUDENT' || (Array.isArray(user?.roles) && user.roles.some(r => (typeof r === 'string' ? r : r.roleName) === 'ROLE_STUDENT'));
-  const isAppAdmin = userRole === 'APP_ADMIN' || (Array.isArray(user?.roles) && user.roles.some(r => (typeof r === 'string' ? r : r.roleName) === 'ROLE_APP_ADMIN' || r === 'APP_ADMIN'));
-  const isEventAdmin = isAppAdmin || userRole === 'EVENT_ADMIN' || (Array.isArray(user?.roles) && user.roles.some(r => (typeof r === 'string' ? r : r.roleName) === 'ROLE_EVENT_ADMIN' || r === 'EVENT_ADMIN'));
+  // Robust Creator Filter
+  const myEventsCount = safeEvents.filter(e => {
+    const creatorId = typeof e.createdBy === 'object' ? e.createdBy?.id : e.createdBy;
+    return String(creatorId) === String(user?.id);
+  }).length;
+
+  // Robust Role Normalization
+  const getRoleStrings = (u) => {
+    if (!u) return [];
+    const roles = new Set();
+    if (u.role) roles.add(String(u.role).replace(/^ROLE_/, '').toUpperCase());
+    if (Array.isArray(u.roles)) {
+      u.roles.forEach(r => {
+        const val = typeof r === 'string' ? r : (r.roleName || r.name || '');
+        if (val) roles.add(String(val).replace(/^ROLE_/, '').toUpperCase());
+      });
+    }
+    return Array.from(roles);
+  };
+
+  const userRoles = getRoleStrings(user);
+  const isAppAdmin = userRoles.includes('APP_ADMIN') || userRoles.includes('ADMIN');
+  const isEventAdmin = isAppAdmin || userRoles.includes('EVENT_ADMIN');
+  const isStudent = userRoles.includes('STUDENT') || (!isAppAdmin && !isEventAdmin);
+
+  const displayName = user?.fullName || user?.name || (user?.email ? user.email.split('@')[0] : 'User Profile');
+  const initial = displayName.charAt(0).toUpperCase();
 
   return (
     <aside className={`official-sidebar ${isSidebarOpen ? '' : 'collapsed'}`}>
       {/* Brand Header */}
       <div className="sidebar-brand-box">
-        <div className="brand-icon">
-          <i className="fa-solid fa-graduation-cap"></i>
-        </div>
-        {isSidebarOpen && (
-          <div>
-            <div className="brand-title">Gather</div>
-            <div className="brand-subtitle">Campus Event Management Platform</div>
-          </div>
+        {isSidebarOpen ? (
+          <>
+            <div className="brand-icon">
+              <i className="fa-solid fa-graduation-cap"></i>
+            </div>
+            <div>
+              <div className="brand-title">Gather</div>
+              <div className="brand-subtitle">Campus Event Management Platform</div>
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm sidebar-toggle-btn"
+              onClick={toggleSidebar}
+              title="Collapse Sidebar"
+              style={{ marginLeft: 'auto', padding: '6px 10px' }}
+            >
+              <i className="fa-solid fa-chevron-left"></i>
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm sidebar-toggle-btn"
+            onClick={toggleSidebar}
+            title="Expand Sidebar"
+            style={{ width: '42px', height: '42px', padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '10px', margin: '0 auto' }}
+          >
+            <i className="fa-solid fa-angles-right" style={{ fontSize: '15px' }}></i>
+          </button>
         )}
-        <button
-          type="button"
-          className="btn btn-secondary btn-sm sidebar-toggle-btn"
-          onClick={toggleSidebar}
-          title={isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
-          style={{ marginLeft: isSidebarOpen ? 'auto' : '0', padding: '6px 10px' }}
-        >
-          <i className={isSidebarOpen ? "fa-solid fa-chevron-left" : "fa-solid fa-angles-right"}></i>
-        </button>
       </div>
 
       {/* Categorized Navigation Groups */}
@@ -159,7 +193,7 @@ export default function SidebarNav({
         )}
       </div>
 
-      {/* 4. STICKY BOTTOM PROFILE SECTION (Common to All 3 Roles) */}
+      {/* 4. STICKY BOTTOM PROFILE SECTION */}
       {user && (
         <div className="sidebar-user-footer" style={{ position: 'sticky', bottom: 0, background: 'var(--bg-surface)', zIndex: 10, paddingTop: '14px' }}>
           <div
@@ -169,24 +203,35 @@ export default function SidebarNav({
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '12px',
+              justifyContent: isSidebarOpen ? 'flex-start' : 'center',
+              gap: isSidebarOpen ? '12px' : '0',
               width: '100%',
-              padding: '10px 12px',
-              borderRadius: 'var(--radius-md)',
-              background: activeTab === 'profile' ? '#D97757' : 'rgba(255, 255, 255, 0.04)',
-              border: activeTab === 'profile' ? '1px solid rgba(255, 255, 255, 0.3)' : '1px solid var(--border-subtle)',
+              padding: isSidebarOpen ? '10px 12px' : '6px 0',
+              borderRadius: isSidebarOpen ? 'var(--radius-md)' : '12px',
+              background: activeTab === 'profile' ? '#D97757' : isSidebarOpen ? 'rgba(255, 255, 255, 0.04)' : 'transparent',
+              border: activeTab === 'profile' ? '1px solid rgba(255, 255, 255, 0.3)' : isSidebarOpen ? '1px solid var(--border-subtle)' : 'none',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               color: activeTab === 'profile' ? '#ffffff' : 'var(--text-primary)'
             }}
           >
-            <div className="avatar-circle" style={{ flexShrink: 0 }} title={user.name || user.email}>
-              {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+            <div
+              className="avatar-circle"
+              style={{
+                flexShrink: 0,
+                width: isSidebarOpen ? '40px' : '44px',
+                height: isSidebarOpen ? '40px' : '44px',
+                fontSize: isSidebarOpen ? '16px' : '17px',
+                boxShadow: isSidebarOpen ? 'none' : '0 2px 8px rgba(0,0,0,0.15)'
+              }}
+              title={displayName}
+            >
+              {initial}
             </div>
             {isSidebarOpen && (
               <div className="user-info" style={{ flex: 1, minWidth: 0 }}>
                 <div className="user-name" style={{ fontWeight: 600, fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {user.name || user.fullName || 'User Profile'}
+                  {displayName}
                 </div>
                 <div className={`role-pill ${formatRoleClass(user.role)}`} style={{ display: 'inline-flex', fontSize: '10px' }}>
                   <i className="fa-solid fa-shield-halved"></i> {formatRole(user.role || 'STUDENT')}
@@ -196,15 +241,24 @@ export default function SidebarNav({
             {isSidebarOpen && (
               <button
                 type="button"
-                className="btn btn-secondary btn-sm"
+                className="btn btn-sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   logout();
                 }}
                 title="Logout"
-                style={{ padding: '6px 8px', flexShrink: 0, marginLeft: 'auto' }}
+                style={{
+                  padding: '6px 10px',
+                  flexShrink: 0,
+                  marginLeft: 'auto',
+                  background: activeTab === 'profile' ? 'rgba(255, 255, 255, 0.22)' : 'rgba(225, 29, 72, 0.1)',
+                  border: activeTab === 'profile' ? '1px solid rgba(255, 255, 255, 0.45)' : '1px solid rgba(225, 29, 72, 0.25)',
+                  color: activeTab === 'profile' ? '#FFFFFF' : '#E11D48',
+                  cursor: 'pointer',
+                  borderRadius: '8px'
+                }}
               >
-                <i className="fa-solid fa-right-from-bracket" style={{ color: activeTab === 'profile' ? '#ffffff' : '#f43f5e' }}></i>
+                <i className="fa-solid fa-right-from-bracket" style={{ fontSize: '13px', color: 'inherit' }}></i>
               </button>
             )}
           </div>

@@ -20,7 +20,9 @@ import {
   Send,
   Clock,
   MessageSquare,
-  XCircle
+  XCircle,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { authService } from '../../services/authService';
@@ -52,6 +54,7 @@ export const Profile = () => {
   const [requestError, setRequestError] = useState('');
   const [myRequests, setMyRequests] = useState([]);
   const [loadingMyRequests, setLoadingMyRequests] = useState(false);
+  const [showHistoryLogs, setShowHistoryLogs] = useState(false);
 
   // Change Password Form State
   const [passwordForm, setPasswordForm] = useState({
@@ -261,7 +264,7 @@ export const Profile = () => {
             <h1>{user?.fullName || user?.name || 'Student Profile'}</h1>
             <div className="role-tags-container">
               <Shield size={14} className="icon-badge" />
-              <span className="role-label">Roles:</span>
+              <span className="role-label">{getRolesDisplay().length > 1 ? 'Roles:' : 'Role:'}</span>
               {getRolesDisplay().map((r, i) => (
                 <span key={i} className={`badge-role badge-role-${formatRoleClass(r)}`}>
                   {formatRole(r)}
@@ -497,8 +500,8 @@ export const Profile = () => {
           )}
 
           <form onSubmit={handlePasswordSubmit} className="profile-form">
-            <div className="password-form-stack">
-              <div className="form-group">
+            <div className="password-form-stack" style={{ width: '100%', maxWidth: '750px' }}>
+              <div className="form-group" style={{ width: '100%' }}>
                 <label><Lock size={15} /> Current Password</label>
                 <div className="password-input-wrapper">
                   <input
@@ -519,45 +522,47 @@ export const Profile = () => {
                 </div>
               </div>
 
-              <div className="form-group">
-                <label><Key size={15} /> New Password</label>
-                <div className="password-input-wrapper">
-                  <input
-                    type={showNewPassword ? "text" : "password"}
-                    className="form-control"
-                    value={passwordForm.newPassword}
-                    onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                    placeholder="Minimum 8 characters"
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="password-toggle-btn"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                  >
-                    {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
+              <div className="password-inputs-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', width: '100%' }}>
+                <div className="form-group" style={{ width: '100%' }}>
+                  <label><Key size={15} /> New Password</label>
+                  <div className="password-input-wrapper">
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      className="form-control"
+                      value={passwordForm.newPassword}
+                      onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                      placeholder="Minimum 8 characters"
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle-btn"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                    >
+                      {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              <div className="form-group">
-                <label><CheckCircle2 size={15} /> Confirm New Password</label>
-                <div className="password-input-wrapper">
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    className="form-control"
-                    value={passwordForm.confirmPassword}
-                    onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                    placeholder="Re-enter new password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="password-toggle-btn"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  >
-                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
+                <div className="form-group" style={{ width: '100%' }}>
+                  <label><CheckCircle2 size={15} /> Confirm New Password</label>
+                  <div className="password-input-wrapper">
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      className="form-control"
+                      value={passwordForm.confirmPassword}
+                      onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                      placeholder="Re-enter new password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle-btn"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -584,7 +589,7 @@ export const Profile = () => {
         <div className="card form-card">
           <div className="form-card-header">
             <h2><ShieldAlert size={20} /> Request Application Admin Privileges</h2>
-            <p>Students and Event Admins can submit a request for Application Admin privileges to an existing App Admin.</p>
+            {/* <p>Students and Event Admins can submit a request for Application Admin privileges to an existing App Admin.</p> */}
           </div>
 
           {user?.role === 'APP_ADMIN' ? (
@@ -598,70 +603,6 @@ export const Profile = () => {
             </div>
           ) : (
             <>
-              {/* My Submitted Requests History */}
-              {myRequests.length > 0 && (
-                <div style={{ marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text-main)' }}>
-                    <Clock size={16} style={{ display: 'inline', marginRight: '6px' }} /> Submitted Request Status & Audit History
-                  </h3>
-                  {myRequests.map((req, index) => {
-                    const reviewer = req.reviewedBy || {};
-                    const reviewerName = reviewer.fullName || reviewer.name || reviewer.email || 'Application Admin';
-                    const reviewerEmail = reviewer.email ? `(${reviewer.email})` : '';
-
-                    return (
-                      <div
-                        key={req.id}
-                        style={{
-                          padding: '1.25rem',
-                          borderRadius: '10px',
-                          border: req.status === 'REJECTED' ? '1px solid #f43f5e' : req.status === 'APPROVED' ? '1px solid #10b981' : '1px solid var(--card-border)',
-                          background: req.status === 'REJECTED' ? 'rgba(244, 63, 94, 0.06)' : req.status === 'APPROVED' ? 'rgba(16, 185, 129, 0.06)' : 'var(--bg-tertiary)'
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
-                            Request {index + 1} • Submitted {req.requestedAt ? new Date(req.requestedAt).toLocaleDateString() : 'recently'}
-                          </span>
-                          <span className={`badge ${req.status === 'PENDING' ? 'badge-warning' : req.status === 'APPROVED' ? 'badge-success' : 'badge-danger'}`}>
-                            {req.status}
-                          </span>
-                        </div>
-
-                        <div style={{ background: 'var(--bg-card)', padding: '0.65rem 0.85rem', borderRadius: '6px', marginBottom: '0.75rem', border: '1px solid var(--card-border)' }}>
-                          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>
-                            Justification Submitted:
-                          </span>
-                          <p style={{ fontSize: '0.875rem', margin: 0, fontStyle: 'italic' }}>
-                            "{req.requestReason}"
-                          </p>
-                        </div>
-
-                        {req.status === 'REJECTED' && (
-                          <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px dashed rgba(244, 63, 94, 0.4)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#e11d48', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.35rem' }}>
-                              <XCircle size={16} /> Rejection Remarks from App Admin:
-                            </div>
-                            <p style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: 600, margin: '0 0 0.5rem 0', background: 'var(--bg-card)', padding: '0.6rem 0.85rem', borderRadius: '6px', border: '1px solid rgba(244, 63, 94, 0.3)' }}>
-                              "{req.remarks || 'No specific remarks provided.'}"
-                            </p>
-                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block' }}>
-                              Reviewed & Rejected by App Admin: <strong>{reviewerName}</strong> {reviewerEmail} {req.reviewedAt ? `on ${new Date(req.reviewedAt).toLocaleString()}` : ''}
-                            </span>
-                          </div>
-                        )}
-
-                        {req.status === 'APPROVED' && (
-                          <div style={{ marginTop: '0.5rem', fontSize: '0.825rem', color: '#10b981', fontWeight: 600 }}>
-                            ✓ Approved by App Admin: <strong>{reviewerName}</strong> {reviewerEmail} {req.reviewedAt ? `on ${new Date(req.reviewedAt).toLocaleString()}` : ''}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
               {requestSuccess && (
                 <div className="alert alert-success">
                   <CheckCircle2 size={18} /> {requestSuccess}
@@ -681,11 +622,11 @@ export const Profile = () => {
                     rows={4}
                     value={requestReason}
                     onChange={(e) => setRequestReason(e.target.value)}
-                    placeholder="Provide justification for why you need Application Admin access (e.g. Managing department events and platform administration)..."
+                    placeholder="Provide justification for why you need Application Admin access"
                     required
                   />
                   <span className="input-hint">
-                    API: <code>POST /api/app-admin-requests</code>. Your request will be sent to the Application Admin team for approval.
+                    {/* API: <code>POST /api/app-admin-requests</code>. Your request will be sent to the Application Admin team for approval. */}
                   </span>
                 </div>
 
@@ -703,6 +644,91 @@ export const Profile = () => {
                   </button>
                 </div>
               </form>
+
+              {/* My Submitted Requests History Collapsible Accordion Dropdown */}
+              {myRequests.length > 0 && (
+                <div className="history-dropdown-wrapper">
+                  <button
+                    type="button"
+                    className="history-dropdown-header"
+                    onClick={() => setShowHistoryLogs(!showHistoryLogs)}
+                    aria-expanded={showHistoryLogs}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      <Clock size={18} style={{ color: '#D97757' }} />
+                      <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>
+                        Submitted Request Status & Audit History ({myRequests.length})
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', opacity: 0.85 }}>
+                      <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>
+                        {showHistoryLogs ? 'Hide History' : 'View History'}
+                      </span>
+                      {showHistoryLogs ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                    </div>
+                  </button>
+
+                  {showHistoryLogs && (
+                    <div className="history-dropdown-content">
+                      {myRequests.map((req, index) => {
+                        const reviewer = req.reviewedBy || {};
+                        const reviewerName = reviewer.fullName || reviewer.name || reviewer.email || 'Application Admin';
+                        const reviewerEmail = reviewer.email ? `(${reviewer.email})` : '';
+
+                        return (
+                          <div
+                            key={req.id}
+                            style={{
+                              padding: '1.25rem',
+                              borderRadius: '10px',
+                              border: req.status === 'REJECTED' ? '1px solid #f43f5e' : req.status === 'APPROVED' ? '1px solid #10b981' : '1px solid var(--card-border)',
+                              background: req.status === 'REJECTED' ? 'rgba(244, 63, 94, 0.06)' : req.status === 'APPROVED' ? 'rgba(16, 185, 129, 0.06)' : 'var(--bg-tertiary)'
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                                Request {index + 1} • Submitted {req.requestedAt ? new Date(req.requestedAt).toLocaleDateString() : 'recently'}
+                              </span>
+                              <span className={`badge ${req.status === 'PENDING' ? 'badge-warning' : req.status === 'APPROVED' ? 'badge-success' : 'badge-danger'}`}>
+                                {req.status}
+                              </span>
+                            </div>
+
+                            <div style={{ background: 'var(--bg-card)', padding: '0.65rem 0.85rem', borderRadius: '6px', marginBottom: '0.75rem', border: '1px solid var(--card-border)' }}>
+                              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>
+                                Justification Submitted:
+                              </span>
+                              <p style={{ fontSize: '0.875rem', margin: 0, fontStyle: 'italic' }}>
+                                "{req.requestReason}"
+                              </p>
+                            </div>
+
+                            {req.status === 'REJECTED' && (
+                              <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px dashed rgba(244, 63, 94, 0.4)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#e11d48', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.35rem' }}>
+                                  <XCircle size={16} /> Rejection Remarks from App Admin:
+                                </div>
+                                <p style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: 600, margin: '0 0 0.5rem 0', background: 'var(--bg-card)', padding: '0.6rem 0.85rem', borderRadius: '6px', border: '1px solid rgba(244, 63, 94, 0.3)' }}>
+                                  "{req.remarks || 'No specific remarks provided.'}"
+                                </p>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block' }}>
+                                  Reviewed & Rejected by App Admin: <strong>{reviewerName}</strong> {reviewerEmail} {req.reviewedAt ? `on ${new Date(req.reviewedAt).toLocaleString()}` : ''}
+                                </span>
+                              </div>
+                            )}
+
+                            {req.status === 'APPROVED' && (
+                              <div style={{ marginTop: '0.5rem', fontSize: '0.825rem', color: '#10b981', fontWeight: 600 }}>
+                                ✓ Approved by App Admin: <strong>{reviewerName}</strong> {reviewerEmail} {req.reviewedAt ? `on ${new Date(req.reviewedAt).toLocaleString()}` : ''}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>

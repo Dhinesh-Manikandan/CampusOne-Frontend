@@ -151,14 +151,13 @@ export const AppAdminRequestsPage = () => {
                   )}
 
                   {req.status === 'PENDING' && (
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button className="btn btn-primary btn-sm" onClick={() => handleApprove(req.id, userName)}>
+                    <div style={{ display: 'flex', gap: '0.65rem' }}>
+                      <button className="btn btn-success btn-sm" onClick={() => handleApprove(req.id, userName)}>
                         <Check size={15} /> Approve & Grant Admin
                       </button>
                       <button
-                        className="btn btn-secondary btn-sm"
+                        className="btn btn-outline-danger btn-sm"
                         onClick={() => { setRejectModalId(req.id); setRejectRemarks(''); }}
-                        style={{ color: '#e11d48' }}
                       >
                         <X size={15} /> Reject
                       </button>
