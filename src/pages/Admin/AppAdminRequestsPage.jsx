@@ -5,8 +5,10 @@ import { useAuth } from '../../context/AuthContext';
 import './AppAdminRequestsPage.css';
 
 export const AppAdminRequestsPage = () => {
-  const { user } = useAuth();
-  const [roleTypeTab, setRoleTypeTab] = useState('APP_ADMIN'); // 'APP_ADMIN' or 'EVENT_ADMIN'
+  const userRole = (user?.role || '').toUpperCase();
+  const isAppAdmin = userRole === 'APP_ADMIN' || (Array.isArray(user?.roles) && user.roles.some(r => (typeof r === 'string' ? r : r.roleName) === 'ROLE_APP_ADMIN' || r === 'APP_ADMIN'));
+
+  const [roleTypeTab, setRoleTypeTab] = useState(() => (isAppAdmin ? 'APP_ADMIN' : 'EVENT_ADMIN')); // 'APP_ADMIN' or 'EVENT_ADMIN'
   const [statusFilter, setStatusFilter] = useState('PENDING'); // 'PENDING', 'APPROVED', 'REJECTED'
   const [requests, setRequests] = useState([]);
   const [loadingRequests, setLoadingRequests] = useState(true);

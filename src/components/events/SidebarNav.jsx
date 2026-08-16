@@ -116,6 +116,16 @@ export default function SidebarNav({
               <i className="fa-solid fa-bullhorn"></i>
               {isSidebarOpen && <span>Noticeboard & Alerts</span>}
             </button>
+
+            <button
+              type="button"
+              className={`sidebar-nav-item ${activeTab === 'admin_requests' || activeTab === 'event_admin_requests' ? 'active' : ''}`}
+              onClick={() => setActiveTab('admin_requests')}
+              title="Event Admin Role Requests"
+            >
+              <i className="fa-solid fa-user-check"></i>
+              {isSidebarOpen && <span>Event Admin Requests</span>}
+            </button>
           </>
         )}
 
