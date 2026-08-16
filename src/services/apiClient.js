@@ -63,6 +63,11 @@ const handleResponse = async (response) => {
   catch { data = null; }
 
   if (!response.ok) {
+    if (response.status === 403) {
+      window.dispatchEvent(new CustomEvent('gather_access_denied', {
+        detail: { message: data?.message || data?.error || 'You don’t currently have permission for this resource.' }
+      }));
+    }
     const error = new Error(data?.message || data?.error || `API Error (${response.status}): ${response.statusText}`);
     error.status = response.status;
     error.data   = data;
@@ -84,6 +89,19 @@ async function executeFetch(url, options = {}) {
     url.includes('/auth/login') ||
     url.includes('/auth/signup') ||
     url.includes('/auth/refresh');
+
+  if (response.status === 403) {
+    try {
+      const cloned = await response.clone().json();
+      window.dispatchEvent(new CustomEvent('gather_access_denied', {
+        detail: { message: cloned?.message || cloned?.error || 'Access Denied: You do not have permission for this endpoint.' }
+      }));
+    } catch (e) {
+      window.dispatchEvent(new CustomEvent('gather_access_denied', {
+        detail: { message: 'Access Denied: You do not have permission for this endpoint.' }
+      }));
+    }
+  }
 
   if (response.status === 401 && !isAuthEndpoint) {
     if (isRefreshing) {

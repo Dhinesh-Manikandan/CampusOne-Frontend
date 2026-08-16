@@ -405,7 +405,15 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  max-width: 520px;
+  width: 100%;
+  max-width: 750px;
+}
+
+.password-inputs-row {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 1.25rem !important;
+  width: 100% !important;
 }
 
 .form-group {
@@ -552,6 +560,70 @@
 /* Spin */
 .animate-spin { animation: spin 1s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* ── Request History Accordion Dropdown ── */
+.history-dropdown-wrapper {
+  margin-top: 1.75rem;
+  border: 1px solid var(--card-border, #E8E6E0);
+  border-radius: 12px;
+  background: var(--bg-tertiary, #FAF9F6);
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+[data-theme='dark'] .history-dropdown-wrapper {
+  background: #1C1917;
+  border-color: #36332E;
+}
+
+.history-dropdown-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-main, #1A1915);
+  transition: background 0.15s ease;
+}
+
+[data-theme='dark'] .history-dropdown-header {
+  color: #F0EBE4;
+}
+
+.history-dropdown-header:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+[data-theme='dark'] .history-dropdown-header:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.history-dropdown-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0 1.25rem 1.25rem 1.25rem;
+  border-top: 1px solid var(--card-border, #E8E6E0);
+  animation: slideDown 0.25s ease-out;
+}
+
+[data-theme='dark'] .history-dropdown-content {
+  border-top-color: #36332E;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
 /* Responsive */
 @media (max-width: 768px) {

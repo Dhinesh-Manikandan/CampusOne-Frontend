@@ -19,43 +19,108 @@ import { Dashboard } from './pages/Dashboard/Dashboard';
 import { AppAdminRequestsPage } from './pages/Admin/AppAdminRequestsPage';
 import { AppAdminsManagementPage } from './pages/Admin/AppAdminsManagementPage';
 import { Profile } from './pages/Profile/Profile';
+import AccessDenied from './pages/AccessDenied/AccessDenied';
 import { apiClient } from './services/apiClient';
+
+const TAB_PATH_MAP = {
+  dashboard: '/dashboard',
+  admin_dashboard: '/admin-dashboard',
+  events: '/events',
+  my_registered_events: '/my-registered-events',
+  my_events: '/my-events',
+  participants: '/participants',
+  announcements: '/announcements',
+  admin_requests: '/admin-requests',
+  app_admins: '/app-admins',
+  profile: '/profile',
+  access_denied: '/access-denied',
+};
+
+const PATH_TAB_MAP = {
+  '/dashboard': 'dashboard',
+  '/admin-dashboard': 'admin_dashboard',
+  '/events': 'events',
+  '/my-registered-events': 'my_registered_events',
+  '/my-events': 'my_events',
+  '/participants': 'participants',
+  '/announcements': 'announcements',
+  '/admin-requests': 'admin_requests',
+  '/app-admins': 'app_admins',
+  '/profile': 'profile',
+  '/access-denied': 'access_denied',
+};
 
 function MainApp() {
   const { user: authUser, token: authToken, logout: authLogout } = useAuth();
   const [token, setToken] = useState(() => authToken || localStorage.getItem('gather_token') || '');
   const [user, setUser] = useState(authUser || null);
+  const [accessDeniedMessage, setAccessDeniedMessage] = useState('');
 
   const userRole = (user?.role || authUser?.role || '').toUpperCase();
   const isAppAdmin = userRole === 'APP_ADMIN' || (Array.isArray(user?.roles || authUser?.roles) && (user?.roles || authUser?.roles).some(r => (typeof r === 'string' ? r : r.roleName) === 'ROLE_APP_ADMIN' || r === 'APP_ADMIN'));
   const isEventAdmin = isAppAdmin || userRole === 'EVENT_ADMIN' || (Array.isArray(user?.roles || authUser?.roles) && (user?.roles || authUser?.roles).some(r => (typeof r === 'string' ? r : r.roleName) === 'ROLE_EVENT_ADMIN' || r === 'EVENT_ADMIN'));
 
-  // App Navigation Tabs (Default: 'events' for students)
-  const [activeTab, setActiveTab] = useState(() => {
-    if (isAppAdmin) return 'admin_dashboard';
-    if (isEventAdmin) return 'my_events';
-    return 'events';
-  });
-
   const location = useLocation();
   const navigate = useNavigate();
 
+  const getTabForPath = (path, isAdminApp, isAdminEvent) => {
+    if (path === '/admin-requests') return isAdminApp ? 'admin_requests' : 'access_denied';
+    if (path === '/app-admins') return isAdminApp ? 'app_admins' : 'access_denied';
+    if (path === '/admin-dashboard') return isAdminApp ? 'admin_dashboard' : 'access_denied';
+    if (path === '/my-events') return isAdminEvent ? 'my_events' : 'access_denied';
+    if (path === '/participants') return isAdminEvent ? 'participants' : 'access_denied';
+    if (path === '/dashboard') return 'dashboard';
+    if (path === '/events') return 'events';
+    if (path === '/my-registered-events') return 'my_registered_events';
+    if (path === '/announcements') return 'announcements';
+    if (path === '/profile') return 'profile';
+    if (path === '/access-denied') return 'access_denied';
+
+    if (isAdminApp) return 'admin_dashboard';
+    if (isAdminEvent) return 'my_events';
+    return 'events';
+  };
+
+  // App Navigation Tabs
+  const [activeTab, setActiveTab] = useState(() => {
+    return getTabForPath(window.location.pathname, isAppAdmin, isEventAdmin);
+  });
+
   useEffect(() => {
-    const path = location.pathname;
-    if (path === '/admin-requests') setActiveTab(isAppAdmin ? 'admin_requests' : 'events');
-    else if (path === '/app-admins') setActiveTab(isAppAdmin ? 'app_admins' : 'events');
-    else if (path === '/profile') setActiveTab('profile');
-    else if (path === '/admin-dashboard') setActiveTab(isAppAdmin ? 'admin_dashboard' : 'events');
-    else if (path === '/events') setActiveTab('events');
-    else if (path === '/my-events') setActiveTab(isEventAdmin ? 'my_events' : 'events');
-    else if (path === '/participants') setActiveTab(isEventAdmin ? 'participants' : 'events');
-    else if (path === '/announcements') setActiveTab(isEventAdmin ? 'announcements' : 'events');
-    else if (path === '/') {
-      if (isAppAdmin) setActiveTab('admin_dashboard');
-      else if (isEventAdmin) setActiveTab('my_events');
-      else setActiveTab('events');
+    const handleAccessDeniedEvent = (e) => {
+      const msg = e?.detail?.message || 'You don’t currently have permission to access this section. This page requires Event Admin or Application Admin privileges.';
+      setAccessDeniedMessage(msg);
+      setActiveTab('access_denied');
+      if (window.location.pathname !== '/access-denied') {
+        navigate('/access-denied');
+      }
+    };
+    window.addEventListener('gather_access_denied', handleAccessDeniedEvent);
+    return () => window.removeEventListener('gather_access_denied', handleAccessDeniedEvent);
+  }, [navigate]);
+
+  useEffect(() => {
+    const expectedTab = getTabForPath(location.pathname, isAppAdmin, isEventAdmin);
+    setActiveTab(expectedTab);
+
+    if (expectedTab === 'access_denied' && !accessDeniedMessage) {
+      setAccessDeniedMessage('You don’t currently have permission to view this section. You can request admin privileges or return to your campus events dashboard.');
     }
-  }, [location.pathname, isAppAdmin, isEventAdmin]);
+
+    const canonicalPath = TAB_PATH_MAP[expectedTab] || '/events';
+    if (location.pathname === '/' || !PATH_TAB_MAP[location.pathname] || (PATH_TAB_MAP[location.pathname] && PATH_TAB_MAP[location.pathname] !== expectedTab && expectedTab !== 'access_denied')) {
+      navigate(canonicalPath, { replace: true });
+    }
+  }, [location.pathname, isAppAdmin, isEventAdmin, navigate]);
+
+  const handleTabChange = (tabOrFn) => {
+    const nextTab = typeof tabOrFn === 'function' ? tabOrFn(activeTab) : tabOrFn;
+    setActiveTab(nextTab);
+    const targetPath = TAB_PATH_MAP[nextTab] || '/events';
+    if (location.pathname !== targetPath) {
+      navigate(targetPath);
+    }
+  };
 
   // Main Data States
   const [events, setEvents] = useState([]);
@@ -600,7 +665,7 @@ function MainApp() {
         isSidebarOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabChange}
         events={events}
         userRegistrations={userRegistrations}
         user={user}
@@ -624,7 +689,7 @@ function MainApp() {
               dashboardSummary={dashboardSummary}
               events={events}
               openCreateEventModal={openCreateEventModal}
-              setActiveTab={setActiveTab}
+              setActiveTab={handleTabChange}
             />
           )}
 
@@ -646,7 +711,7 @@ function MainApp() {
               openEditEventModal={openEditEventModal}
               handleDeleteEvent={handleDeleteEvent}
               setSelectedEventId={setSelectedEventId}
-              setActiveTab={setActiveTab}
+              setActiveTab={handleTabChange}
               loadParticipants={loadParticipants}
               loadAnnouncements={loadAnnouncements}
             />
@@ -657,7 +722,7 @@ function MainApp() {
               userRegistrations={userRegistrations}
               events={events}
               handleCancelRegistration={handleCancelRegistration}
-              setActiveTab={setActiveTab}
+              setActiveTab={handleTabChange}
               viewEventDetails={viewEventDetails}
             />
           )}
@@ -674,7 +739,7 @@ function MainApp() {
               openEditEventModal={openEditEventModal}
               handleDeleteEvent={handleDeleteEvent}
               setSelectedEventId={setSelectedEventId}
-              setActiveTab={setActiveTab}
+              setActiveTab={handleTabChange}
               loadParticipants={loadParticipants}
               loadAnnouncements={loadAnnouncements}
             />
@@ -715,6 +780,13 @@ function MainApp() {
           {activeTab === 'admin_requests' && <AppAdminRequestsPage />}
           {activeTab === 'app_admins' && <AppAdminsManagementPage />}
           {activeTab === 'profile' && <Profile />}
+          {activeTab === 'access_denied' && (
+            <AccessDenied 
+              message={accessDeniedMessage} 
+              user={user} 
+              setActiveTab={handleTabChange} 
+            />
+          )}
         </main>
       </div>
 
