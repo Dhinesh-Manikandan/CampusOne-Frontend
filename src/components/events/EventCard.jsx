@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatTime12Hour } from '../../utils/formatTime';
 
 export default function EventCard({
   event,
@@ -46,11 +47,11 @@ export default function EventCard({
             <i className="fa-solid fa-location-dot"></i> {event.venue}
           </div>
           <div className="meta-item">
-            <i className="fa-solid fa-calendar"></i> {event.eventDate} ({event.startTime} - {event.endTime})
+            <i className="fa-solid fa-calendar"></i> {event.eventDate} ({formatTime12Hour(event.startTime)} - {formatTime12Hour(event.endTime)})
           </div>
           {event.registrationDeadline && (
             <div className="meta-item" style={{ color: isDeadlinePassed ? '#ef4444' : 'var(--text-muted)' }}>
-              <i className="fa-solid fa-clock"></i> Deadline: {event.registrationDeadline} {isDeadlinePassed ? '(Ended)' : ''}
+              <i className="fa-solid fa-clock"></i> Registration Deadline: {event.registrationDeadline} {isDeadlinePassed ? '(Ended)' : ''}
             </div>
           )}
           <div className="meta-item">

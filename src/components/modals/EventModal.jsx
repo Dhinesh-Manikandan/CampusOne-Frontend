@@ -142,7 +142,7 @@ export default function EventModal({
             />
           </div>
           <div className="form-group">
-            <label>Start Time *</label>
+            <label>Start Time * <span style={{ fontSize: '0.8em', color: 'var(--text-muted)' }}>(Specify AM/PM e.g. 09:30 AM)</span></label>
             <input 
               type="time" 
               value={eventForm.startTime} 
@@ -151,7 +151,7 @@ export default function EventModal({
             />
           </div>
           <div className="form-group">
-            <label>End Time * <span style={{ fontSize: '0.8em', color: 'var(--text-muted)' }}>(After Start Time)</span></label>
+            <label>End Time * <span style={{ fontSize: '0.8em', color: 'var(--text-muted)' }}>(Specify AM/PM e.g. 05:30 PM)</span></label>
             <input 
               type="time" 
               value={eventForm.endTime} 
