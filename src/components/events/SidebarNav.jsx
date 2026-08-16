@@ -167,6 +167,16 @@ export default function SidebarNav({
             {isSidebarOpen && <span>Noticeboard & Alerts</span>}
           </button>
         )}
+
+        <button
+          type="button"
+          className={`sidebar-nav-item ${activeTab === 'profile' ? 'active' : ''}`}
+          onClick={() => setActiveTab('profile')}
+          title="My Profile & Admin Role Requests"
+        >
+          <i className="fa-solid fa-user-shield"></i>
+          {isSidebarOpen && <span>Profile & Admin Requests</span>}
+        </button>
       </div>
 
       {/* 4. STICKY BOTTOM PROFILE SECTION (Common to All 3 Roles) */}
