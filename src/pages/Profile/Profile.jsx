@@ -21,13 +21,10 @@ import {
   Clock,
   MessageSquare,
   XCircle,
-<<<<<<< HEAD
   ChevronDown,
-  ChevronUp
-=======
+  ChevronUp,
   CheckSquare,
   Square
->>>>>>> baa8446 (feat: Extend profile role request checkboxes for App Admin and Event Admin and enable Event Admin requests approval flow)
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { authService } from '../../services/authService';
@@ -622,55 +619,6 @@ export const Profile = () => {
       {activeTab === 'request_admin' && (
         <div className="card form-card">
           <div className="form-card-header">
-<<<<<<< HEAD
-            <h2><ShieldAlert size={20} /> Request Application Admin Privileges</h2>
-            {/* <p>Students and Event Admins can submit a request for Application Admin privileges to an existing App Admin.</p> */}
-          </div>
-
-          {user?.role === 'APP_ADMIN' ? (
-            <div className="alert alert-success" style={{ padding: '1.25rem', flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}>
-                <CheckCircle2 size={20} /> Application Admin Role Granted
-              </div>
-              <p style={{ fontSize: '0.875rem' }}>
-                Your account already holds full Application Admin privileges. You can view, create, and manage admins or review incoming user requests in the Application Admin section.
-              </p>
-            </div>
-          ) : (
-            <>
-              {requestSuccess && (
-                <div className="alert alert-success">
-                  <CheckCircle2 size={18} /> {requestSuccess}
-                </div>
-              )}
-              {requestError && (
-                <div className="alert alert-danger">
-                  <AlertCircle size={18} /> {requestError}
-                </div>
-              )}
-
-              <form onSubmit={handleAdminRequestSubmit} className="profile-form">
-                <div className="form-group">
-                  <label><MessageSquare size={15} /> Justification & Request Reason *</label>
-                  <textarea
-                    className="form-control"
-                    rows={4}
-                    value={requestReason}
-                    onChange={(e) => setRequestReason(e.target.value)}
-                    placeholder="Provide justification for why you need Application Admin access"
-                    required
-                  />
-                  <span className="input-hint">
-                    {/* API: <code>POST /api/app-admin-requests</code>. Your request will be sent to the Application Admin team for approval. */}
-                  </span>
-                </div>
-
-                <div className="form-actions">
-                  <button
-                    type="submit"
-                    className="btn btn-solid-primary"
-                    disabled={requestLoading}
-=======
             <h2><ShieldAlert size={20} /> Request Administrative Privileges</h2>
             <p>Select the admin roles you wish to apply for and provide justification for evaluation by Application Admins.</p>
           </div>
@@ -695,7 +643,6 @@ export const Profile = () => {
                       border: req.status === 'REJECTED' ? '1px solid #f43f5e' : req.status === 'APPROVED' ? '1px solid #10b981' : '1px solid var(--card-border)',
                       background: req.status === 'REJECTED' ? 'rgba(244, 63, 94, 0.06)' : req.status === 'APPROVED' ? 'rgba(16, 185, 129, 0.06)' : 'var(--bg-tertiary)'
                     }}
->>>>>>> baa8446 (feat: Extend profile role request checkboxes for App Admin and Event Admin and enable Event Admin requests approval flow)
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -729,112 +676,20 @@ export const Profile = () => {
                           "{req.remarks || 'No specific remarks provided.'}"
                         </p>
                         <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block' }}>
-                          Reviewed by App Admin: <strong>{reviewerName}</strong> {reviewerEmail} {req.reviewedAt ? `on ${new Date(req.reviewedAt).toLocaleString()}` : ''}
+                          Reviewed & Rejected by Admin: <strong>{reviewerName}</strong> {reviewerEmail} {req.reviewedAt ? `on ${new Date(req.reviewedAt).toLocaleString()}` : ''}
                         </span>
                       </div>
                     )}
-<<<<<<< HEAD
-                  </button>
-                </div>
-              </form>
-
-              {/* My Submitted Requests History Collapsible Accordion Dropdown */}
-              {myRequests.length > 0 && (
-                <div className="history-dropdown-wrapper">
-                  <button
-                    type="button"
-                    className="history-dropdown-header"
-                    onClick={() => setShowHistoryLogs(!showHistoryLogs)}
-                    aria-expanded={showHistoryLogs}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                      <Clock size={18} style={{ color: '#D97757' }} />
-                      <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>
-                        Submitted Request Status & Audit History ({myRequests.length})
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', opacity: 0.85 }}>
-                      <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>
-                        {showHistoryLogs ? 'Hide History' : 'View History'}
-                      </span>
-                      {showHistoryLogs ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                    </div>
-                  </button>
-
-                  {showHistoryLogs && (
-                    <div className="history-dropdown-content">
-                      {myRequests.map((req, index) => {
-                        const reviewer = req.reviewedBy || {};
-                        const reviewerName = reviewer.fullName || reviewer.name || reviewer.email || 'Application Admin';
-                        const reviewerEmail = reviewer.email ? `(${reviewer.email})` : '';
-
-                        return (
-                          <div
-                            key={req.id}
-                            style={{
-                              padding: '1.25rem',
-                              borderRadius: '10px',
-                              border: req.status === 'REJECTED' ? '1px solid #f43f5e' : req.status === 'APPROVED' ? '1px solid #10b981' : '1px solid var(--card-border)',
-                              background: req.status === 'REJECTED' ? 'rgba(244, 63, 94, 0.06)' : req.status === 'APPROVED' ? 'rgba(16, 185, 129, 0.06)' : 'var(--bg-tertiary)'
-                            }}
-                          >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
-                                Request {index + 1} • Submitted {req.requestedAt ? new Date(req.requestedAt).toLocaleDateString() : 'recently'}
-                              </span>
-                              <span className={`badge ${req.status === 'PENDING' ? 'badge-warning' : req.status === 'APPROVED' ? 'badge-success' : 'badge-danger'}`}>
-                                {req.status}
-                              </span>
-                            </div>
-
-                            <div style={{ background: 'var(--bg-card)', padding: '0.65rem 0.85rem', borderRadius: '6px', marginBottom: '0.75rem', border: '1px solid var(--card-border)' }}>
-                              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>
-                                Justification Submitted:
-                              </span>
-                              <p style={{ fontSize: '0.875rem', margin: 0, fontStyle: 'italic' }}>
-                                "{req.requestReason}"
-                              </p>
-                            </div>
-
-                            {req.status === 'REJECTED' && (
-                              <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px dashed rgba(244, 63, 94, 0.4)' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#e11d48', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.35rem' }}>
-                                  <XCircle size={16} /> Rejection Remarks from App Admin:
-                                </div>
-                                <p style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: 600, margin: '0 0 0.5rem 0', background: 'var(--bg-card)', padding: '0.6rem 0.85rem', borderRadius: '6px', border: '1px solid rgba(244, 63, 94, 0.3)' }}>
-                                  "{req.remarks || 'No specific remarks provided.'}"
-                                </p>
-                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block' }}>
-                                  Reviewed & Rejected by App Admin: <strong>{reviewerName}</strong> {reviewerEmail} {req.reviewedAt ? `on ${new Date(req.reviewedAt).toLocaleString()}` : ''}
-                                </span>
-                              </div>
-                            )}
-
-                            {req.status === 'APPROVED' && (
-                              <div style={{ marginTop: '0.5rem', fontSize: '0.825rem', color: '#10b981', fontWeight: 600 }}>
-                                ✓ Approved by App Admin: <strong>{reviewerName}</strong> {reviewerEmail} {req.reviewedAt ? `on ${new Date(req.reviewedAt).toLocaleString()}` : ''}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-            </>
-=======
 
                     {req.status === 'APPROVED' && (
                       <div style={{ marginTop: '0.5rem', fontSize: '0.825rem', color: '#10b981', fontWeight: 600 }}>
-                        ✓ Approved by App Admin: <strong>{reviewerName}</strong> {reviewerEmail} {req.reviewedAt ? `on ${new Date(req.reviewedAt).toLocaleString()}` : ''}
+                        ✓ Approved by Admin: <strong>{reviewerName}</strong> {reviewerEmail} {req.reviewedAt ? `on ${new Date(req.reviewedAt).toLocaleString()}` : ''}
                       </div>
                     )}
                   </div>
                 );
               })}
             </div>
->>>>>>> baa8446 (feat: Extend profile role request checkboxes for App Admin and Event Admin and enable Event Admin requests approval flow)
           )}
 
           {requestSuccess && (
@@ -947,9 +802,9 @@ export const Profile = () => {
                 disabled={requestLoading || (!requestAppAdmin && !requestEventAdmin)}
               >
                 {requestLoading ? (
-                  <><Loader2 size={16} className="animate-spin" /> Submitting Request...</>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Loader2 size={16} className="animate-spin" /> Submitting Request...</span>
                 ) : (
-                  <><Send size={16} /> Submit Role Request</>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Send size={16} /> Submit Role Request</span>
                 )}
               </button>
             </div>
