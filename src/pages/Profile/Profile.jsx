@@ -20,7 +20,9 @@ import {
   Send,
   Clock,
   MessageSquare,
-  XCircle
+  XCircle,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { authService } from '../../services/authService';
@@ -32,7 +34,10 @@ export const Profile = () => {
   const { user, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState('view'); // 'view', 'edit', 'password', 'request_admin'
 
-  const isAppAdmin = user?.role === 'APP_ADMIN' || (Array.isArray(user?.roles) && user.roles.some(r => (typeof r === 'string' ? r : r.roleName) === 'ROLE_APP_ADMIN' || (typeof r === 'string' ? r : r.roleName) === 'APP_ADMIN'));
+  const userRolesList = (user?.roles || []).map(r => typeof r === 'string' ? r.replace('ROLE_', '') : ((r && r.roleName) ? r.roleName.replace('ROLE_', '') : 'STUDENT'));
+  const currentRole = (user?.role || '').replace('ROLE_', '');
+  const hasAppAdminRole = currentRole === 'APP_ADMIN' || userRolesList.includes('APP_ADMIN');
+  const hasEventAdminRole = hasAppAdminRole || currentRole === 'EVENT_ADMIN' || userRolesList.includes('EVENT_ADMIN');
 
   // Edit Profile Form State
   const [profileForm, setProfileForm] = useState({
@@ -47,10 +52,13 @@ export const Profile = () => {
 
   // Admin Request Form State
   const [requestReason, setRequestReason] = useState('');
+  const [requestAppAdmin, setRequestAppAdmin] = useState(false);
+  const [requestEventAdmin, setRequestEventAdmin] = useState(false);
   const [requestLoading, setRequestLoading] = useState(false);
   const [requestSuccess, setRequestSuccess] = useState('');
   const [requestError, setRequestError] = useState('');
-  const [myRequests, setMyRequests] = useState([]);
+  const [myAppRequests, setMyAppRequests] = useState([]);
+  const [myEventRequests, setMyEventRequests] = useState([]);
   const [loadingMyRequests, setLoadingMyRequests] = useState(false);
 
   // Change Password Form State
@@ -79,7 +87,7 @@ export const Profile = () => {
   }, [user, activeTab]);
 
   useEffect(() => {
-    if (activeTab === 'request_admin' && !isAppAdmin) {
+    if (activeTab === 'request_admin') {
       fetchMyAdminRequests();
     }
   }, [activeTab]);
@@ -87,14 +95,21 @@ export const Profile = () => {
   const fetchMyAdminRequests = async () => {
     setLoadingMyRequests(true);
     try {
-      const data = await adminRequestService.getMyRequests();
-      setMyRequests(Array.isArray(data) ? data : []);
+      const [appData, eventData] = await Promise.all([
+        adminRequestService.getMyRequests().catch(() => []),
+        adminRequestService.getMyEventAdminRequests().catch(() => [])
+      ]);
+      setMyAppRequests(Array.isArray(appData) ? appData : []);
+      setMyEventRequests(Array.isArray(eventData) ? eventData : []);
     } catch (err) {
       console.error('Failed to fetch my requests:', err);
     } finally {
       setLoadingMyRequests(false);
     }
   };
+
+  const hasPendingAppAdmin = myAppRequests.some(r => r.status === 'PENDING');
+  const hasPendingEventAdmin = myEventRequests.some(r => r.status === 'PENDING');
 
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
@@ -174,6 +189,10 @@ export const Profile = () => {
     setRequestError('');
     setRequestSuccess('');
 
+    if (!requestAppAdmin && !requestEventAdmin) {
+      setRequestError('Please select at least one role to request (App Admin or Event Admin).');
+      return;
+    }
     if (!requestReason.trim()) {
       setRequestError('Please enter your request reason and justification.');
       return;
@@ -181,13 +200,26 @@ export const Profile = () => {
 
     setRequestLoading(true);
     try {
-      await adminRequestService.submitRequest(requestReason.trim());
-      setRequestSuccess('Application Admin request submitted successfully! An Application Admin will review your request.');
-      setRequestReason('');
-      fetchMyAdminRequests();
-      setTimeout(() => {
-        setRequestSuccess('');
-      }, 5000);
+      const submittedRoles = [];
+      if (requestAppAdmin && !hasAppAdminRole && !hasPendingAppAdmin) {
+        await adminRequestService.submitAppAdminRequest(requestReason.trim());
+        submittedRoles.push('App Admin');
+      }
+      if (requestEventAdmin && !hasEventAdminRole && !hasPendingEventAdmin) {
+        await adminRequestService.submitEventAdminRequest(requestReason.trim());
+        submittedRoles.push('Event Admin');
+      }
+
+      if (submittedRoles.length > 0) {
+        setRequestSuccess(`Admin request for ${submittedRoles.join(' and ')} submitted successfully!`);
+        setRequestReason('');
+        setRequestAppAdmin(false);
+        setRequestEventAdmin(false);
+        fetchMyAdminRequests();
+        setTimeout(() => setRequestSuccess(''), 5000);
+      } else {
+        setRequestError('You already possess or have pending requests for the selected roles.');
+      }
     } catch (err) {
       setRequestError(err.message || 'Failed to submit request. You may already have a pending request.');
     } finally {
@@ -211,7 +243,6 @@ export const Profile = () => {
     return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
   };
 
-  // Derive a warm, consistent hue from the name string (same name = same color always)
   const getAvatarColor = (name = '') => {
     const palettes = [
       { bg: '#D97757', text: '#fff' },   // terracotta
@@ -232,12 +263,17 @@ export const Profile = () => {
   const initials = getInitials(displayName || user?.email || 'U');
   const avatarColor = getAvatarColor(displayName || user?.email || 'user');
 
+  // Combine and sort submitted requests
+  const combinedRequests = [
+    ...myAppRequests.map(r => ({ ...r, roleType: 'APP_ADMIN', roleLabel: 'App Admin' })),
+    ...myEventRequests.map(r => ({ ...r, roleType: 'EVENT_ADMIN', roleLabel: 'Event Admin' }))
+  ].sort((a, b) => new Date(b.requestedAt || 0) - new Date(a.requestedAt || 0));
+
   return (
     <div className="profile-page">
       {/* Hero Header Card */}
       <div className="card profile-hero-card">
         <div className="profile-hero-content">
-          {/* Gender-neutral initials avatar */}
           <div
             className="profile-hero-avatar"
             style={{
@@ -298,14 +334,12 @@ export const Profile = () => {
           >
             <Key size={16} /> Change Password
           </button>
-          {!isAppAdmin && (
-            <button
-              className={`tab-btn ${activeTab === 'request_admin' ? 'active' : ''}`}
-              onClick={() => setActiveTab('request_admin')}
-            >
-              <ShieldAlert size={16} /> Request Admin Rights
-            </button>
-          )}
+          <button
+            className={`tab-btn ${activeTab === 'request_admin' ? 'active' : ''}`}
+            onClick={() => setActiveTab('request_admin')}
+          >
+            <ShieldAlert size={16} /> Request Admin Rights
+          </button>
         </div>
       </div>
 
@@ -354,9 +388,6 @@ export const Profile = () => {
                   <span key={i} className="role-pill">{formatRole(r)}</span>
                 ))}
               </div>
-              {/* <p className="security-note">
-                Session authenticated securely via Spring Security JWT Filter.
-              </p> */}
             </div>
           </div>
         </div>
@@ -580,134 +611,201 @@ export const Profile = () => {
       )}
 
       {/* Tab 4: Request Admin Rights */}
-      {activeTab === 'request_admin' && !isAppAdmin && (
+      {activeTab === 'request_admin' && (
         <div className="card form-card">
           <div className="form-card-header">
-            <h2><ShieldAlert size={20} /> Request Application Admin Privileges</h2>
-            <p>Students and Event Admins can submit a request for Application Admin privileges to an existing App Admin.</p>
+            <h2><ShieldAlert size={20} /> Request Administrative Privileges</h2>
+            <p>Select the admin roles you wish to apply for and provide justification for evaluation by Application Admins.</p>
           </div>
 
-          {user?.role === 'APP_ADMIN' ? (
-            <div className="alert alert-success" style={{ padding: '1.25rem', flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}>
-                <CheckCircle2 size={20} /> Application Admin Role Granted
-              </div>
-              <p style={{ fontSize: '0.875rem' }}>
-                Your account already holds full Application Admin privileges. You can view, create, and manage admins or review incoming user requests in the Application Admin section.
-              </p>
-            </div>
-          ) : (
-            <>
-              {/* My Submitted Requests History */}
-              {myRequests.length > 0 && (
-                <div style={{ marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text-main)' }}>
-                    <Clock size={16} style={{ display: 'inline', marginRight: '6px' }} /> Submitted Request Status & Audit History
-                  </h3>
-                  {myRequests.map((req, index) => {
-                    const reviewer = req.reviewedBy || {};
-                    const reviewerName = reviewer.fullName || reviewer.name || reviewer.email || 'Application Admin';
-                    const reviewerEmail = reviewer.email ? `(${reviewer.email})` : '';
+          {/* Submitted Request Audit History */}
+          {combinedRequests.length > 0 && (
+            <div style={{ marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text-main)' }}>
+                <Clock size={16} style={{ display: 'inline', marginRight: '6px' }} /> Submitted Request Status & Audit History
+              </h3>
+              {combinedRequests.map((req, index) => {
+                const reviewer = req.reviewedBy || {};
+                const reviewerName = reviewer.fullName || reviewer.name || reviewer.email || 'Application Admin';
+                const reviewerEmail = reviewer.email ? `(${reviewer.email})` : '';
 
-                    return (
-                      <div
-                        key={req.id}
-                        style={{
-                          padding: '1.25rem',
-                          borderRadius: '10px',
-                          border: req.status === 'REJECTED' ? '1px solid #f43f5e' : req.status === 'APPROVED' ? '1px solid #10b981' : '1px solid var(--card-border)',
-                          background: req.status === 'REJECTED' ? 'rgba(244, 63, 94, 0.06)' : req.status === 'APPROVED' ? 'rgba(16, 185, 129, 0.06)' : 'var(--bg-tertiary)'
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
-                            Request {index + 1} • Submitted {req.requestedAt ? new Date(req.requestedAt).toLocaleDateString() : 'recently'}
-                          </span>
-                          <span className={`badge ${req.status === 'PENDING' ? 'badge-warning' : req.status === 'APPROVED' ? 'badge-success' : 'badge-danger'}`}>
-                            {req.status}
-                          </span>
-                        </div>
-
-                        <div style={{ background: 'var(--bg-card)', padding: '0.65rem 0.85rem', borderRadius: '6px', marginBottom: '0.75rem', border: '1px solid var(--card-border)' }}>
-                          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>
-                            Justification Submitted:
-                          </span>
-                          <p style={{ fontSize: '0.875rem', margin: 0, fontStyle: 'italic' }}>
-                            "{req.requestReason}"
-                          </p>
-                        </div>
-
-                        {req.status === 'REJECTED' && (
-                          <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px dashed rgba(244, 63, 94, 0.4)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#e11d48', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.35rem' }}>
-                              <XCircle size={16} /> Rejection Remarks from App Admin:
-                            </div>
-                            <p style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: 600, margin: '0 0 0.5rem 0', background: 'var(--bg-card)', padding: '0.6rem 0.85rem', borderRadius: '6px', border: '1px solid rgba(244, 63, 94, 0.3)' }}>
-                              "{req.remarks || 'No specific remarks provided.'}"
-                            </p>
-                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block' }}>
-                              Reviewed & Rejected by App Admin: <strong>{reviewerName}</strong> {reviewerEmail} {req.reviewedAt ? `on ${new Date(req.reviewedAt).toLocaleString()}` : ''}
-                            </span>
-                          </div>
-                        )}
-
-                        {req.status === 'APPROVED' && (
-                          <div style={{ marginTop: '0.5rem', fontSize: '0.825rem', color: '#10b981', fontWeight: 600 }}>
-                            ✓ Approved by App Admin: <strong>{reviewerName}</strong> {reviewerEmail} {req.reviewedAt ? `on ${new Date(req.reviewedAt).toLocaleString()}` : ''}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {requestSuccess && (
-                <div className="alert alert-success">
-                  <CheckCircle2 size={18} /> {requestSuccess}
-                </div>
-              )}
-              {requestError && (
-                <div className="alert alert-danger">
-                  <AlertCircle size={18} /> {requestError}
-                </div>
-              )}
-
-              <form onSubmit={handleAdminRequestSubmit} className="profile-form">
-                <div className="form-group">
-                  <label><MessageSquare size={15} /> Justification & Request Reason *</label>
-                  <textarea
-                    className="form-control"
-                    rows={4}
-                    value={requestReason}
-                    onChange={(e) => setRequestReason(e.target.value)}
-                    placeholder="Provide justification for why you need Application Admin access (e.g. Managing department events and platform administration)..."
-                    required
-                  />
-                  <span className="input-hint">
-                    API: <code>POST /api/app-admin-requests</code>. Your request will be sent to the Application Admin team for approval.
-                  </span>
-                </div>
-
-                <div className="form-actions">
-                  <button
-                    type="submit"
-                    className="btn btn-solid-primary"
-                    disabled={requestLoading}
+                return (
+                  <div
+                    key={`${req.roleType}-${req.id}`}
+                    style={{
+                      padding: '1.25rem',
+                      borderRadius: '10px',
+                      border: req.status === 'REJECTED' ? '1px solid #f43f5e' : req.status === 'APPROVED' ? '1px solid #10b981' : '1px solid var(--card-border)',
+                      background: req.status === 'REJECTED' ? 'rgba(244, 63, 94, 0.06)' : req.status === 'APPROVED' ? 'rgba(16, 185, 129, 0.06)' : 'var(--bg-tertiary)'
+                    }}
                   >
-                    {requestLoading ? (
-                      <><Loader2 size={16} className="animate-spin" /> Submitting Request...</>
-                    ) : (
-                      <><Send size={16} /> Submit Admin Request</>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span className="badge" style={{ background: '#3b82f6', color: '#fff', fontSize: '0.75rem', fontWeight: 700 }}>
+                          {req.roleLabel} Request
+                        </span>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                          Submitted {req.requestedAt ? new Date(req.requestedAt).toLocaleDateString() : 'recently'}
+                        </span>
+                      </div>
+                      <span className={`badge ${req.status === 'PENDING' ? 'badge-warning' : req.status === 'APPROVED' ? 'badge-success' : 'badge-danger'}`}>
+                        {req.status}
+                      </span>
+                    </div>
+
+                    <div style={{ background: 'var(--bg-card)', padding: '0.65rem 0.85rem', borderRadius: '6px', marginBottom: '0.75rem', border: '1px solid var(--card-border)' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>
+                        Justification Submitted:
+                      </span>
+                      <p style={{ fontSize: '0.875rem', margin: 0, fontStyle: 'italic' }}>
+                        "{req.requestReason}"
+                      </p>
+                    </div>
+
+                    {req.status === 'REJECTED' && (
+                      <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px dashed rgba(244, 63, 94, 0.4)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#e11d48', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.35rem' }}>
+                          <XCircle size={16} /> Rejection Remarks:
+                        </div>
+                        <p style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: 600, margin: '0 0 0.5rem 0', background: 'var(--bg-card)', padding: '0.6rem 0.85rem', borderRadius: '6px', border: '1px solid rgba(244, 63, 94, 0.3)' }}>
+                          "{req.remarks || 'No specific remarks provided.'}"
+                        </p>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block' }}>
+                          Reviewed by App Admin: <strong>{reviewerName}</strong> {reviewerEmail} {req.reviewedAt ? `on ${new Date(req.reviewedAt).toLocaleString()}` : ''}
+                        </span>
+                      </div>
                     )}
-                  </button>
-                </div>
-              </form>
-            </>
+
+                    {req.status === 'APPROVED' && (
+                      <div style={{ marginTop: '0.5rem', fontSize: '0.825rem', color: '#10b981', fontWeight: 600 }}>
+                        ✓ Approved by App Admin: <strong>{reviewerName}</strong> {reviewerEmail} {req.reviewedAt ? `on ${new Date(req.reviewedAt).toLocaleString()}` : ''}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           )}
+
+          {requestSuccess && (
+            <div className="alert alert-success">
+              <CheckCircle2 size={18} /> {requestSuccess}
+            </div>
+          )}
+          {requestError && (
+            <div className="alert alert-danger">
+              <AlertCircle size={18} /> {requestError}
+            </div>
+          )}
+
+          <form onSubmit={handleAdminRequestSubmit} className="profile-form">
+            {/* Checkboxes for requesting App Admin / Event Admin Roles */}
+            <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+              <label style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.5rem', display: 'block' }}>
+                Select Role(s) to Request *
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {/* Event Admin Checkbox */}
+                <label 
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '12px 14px',
+                    borderRadius: '8px',
+                    border: (hasEventAdminRole || hasPendingEventAdmin) ? '1px solid var(--border-subtle)' : requestEventAdmin ? '1px solid #3b82f6' : '1px solid var(--card-border)',
+                    background: (hasEventAdminRole || hasPendingEventAdmin) ? 'rgba(255,255,255,0.02)' : requestEventAdmin ? 'rgba(59, 130, 246, 0.08)' : 'var(--bg-card)',
+                    opacity: (hasEventAdminRole || hasPendingEventAdmin) ? 0.6 : 1,
+                    cursor: (hasEventAdminRole || hasPendingEventAdmin) ? 'not-allowed' : 'pointer',
+                    userSelect: 'none'
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={requestEventAdmin || hasEventAdminRole}
+                    disabled={hasEventAdminRole || hasPendingEventAdmin}
+                    onChange={(e) => setRequestEventAdmin(e.target.checked)}
+                    style={{ width: '18px', height: '18px', cursor: (hasEventAdminRole || hasPendingEventAdmin) ? 'not-allowed' : 'pointer' }}
+                  />
+                  <div>
+                    <strong style={{ fontSize: '0.9rem', color: 'var(--text-main)' }}>Event Admin (`EVENT_ADMIN`)</strong>
+                    <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      {hasEventAdminRole
+                        ? '✓ You already hold the Event Admin role.'
+                        : hasPendingEventAdmin
+                        ? '⏳ You already have a pending Event Admin request.'
+                        : 'Allows creating, managing, and publishing campus events and noticeboards.'}
+                    </span>
+                  </div>
+                </label>
+
+                {/* App Admin Checkbox */}
+                <label 
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '12px 14px',
+                    borderRadius: '8px',
+                    border: (hasAppAdminRole || hasPendingAppAdmin) ? '1px solid var(--border-subtle)' : requestAppAdmin ? '1px solid #3b82f6' : '1px solid var(--card-border)',
+                    background: (hasAppAdminRole || hasPendingAppAdmin) ? 'rgba(255,255,255,0.02)' : requestAppAdmin ? 'rgba(59, 130, 246, 0.08)' : 'var(--bg-card)',
+                    opacity: (hasAppAdminRole || hasPendingAppAdmin) ? 0.6 : 1,
+                    cursor: (hasAppAdminRole || hasPendingAppAdmin) ? 'not-allowed' : 'pointer',
+                    userSelect: 'none'
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={requestAppAdmin || hasAppAdminRole}
+                    disabled={hasAppAdminRole || hasPendingAppAdmin}
+                    onChange={(e) => setRequestAppAdmin(e.target.checked)}
+                    style={{ width: '18px', height: '18px', cursor: (hasAppAdminRole || hasPendingAppAdmin) ? 'not-allowed' : 'pointer' }}
+                  />
+                  <div>
+                    <strong style={{ fontSize: '0.9rem', color: 'var(--text-main)' }}>Application Admin (`APP_ADMIN`)</strong>
+                    <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      {hasAppAdminRole
+                        ? '✓ You already hold the Application Admin role.'
+                        : hasPendingAppAdmin
+                        ? '⏳ You already have a pending Application Admin request.'
+                        : 'Full platform administration privileges, including reviewing user role requests.'}
+                    </span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label><MessageSquare size={15} /> Justification & Request Reason *</label>
+              <textarea
+                className="form-control"
+                rows={4}
+                value={requestReason}
+                onChange={(e) => setRequestReason(e.target.value)}
+                placeholder="Provide justification for why you need administrative access..."
+                required
+              />
+              <span className="input-hint">
+                Your request will be submitted to Application Admins for official review and approval.
+              </span>
+            </div>
+
+            <div className="form-actions">
+              <button
+                type="submit"
+                className="btn btn-solid-primary"
+                disabled={requestLoading || (!requestAppAdmin && !requestEventAdmin)}
+              >
+                {requestLoading ? (
+                  <><Loader2 size={16} className="animate-spin" /> Submitting Request...</>
+                ) : (
+                  <><Send size={16} /> Submit Role Request</>
+                )}
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>
   );
 };
-
