@@ -30,8 +30,10 @@ export default function EventsCatalogTab({
     return String(event.registrationDeadline) < todayStr;
   };
 
-  const activeEvents = filteredEvents.filter(e => !isDeadlinePassed(e));
-  const endedEvents = filteredEvents.filter(e => isDeadlinePassed(e));
+  const catalogList = filteredEvents.filter(e => !isEventCreator || !isEventCreator(e));
+
+  const activeEvents = catalogList.filter(e => !isDeadlinePassed(e));
+  const endedEvents = catalogList.filter(e => isDeadlinePassed(e));
 
   const displayList = viewDeadlineEnded ? endedEvents : activeEvents;
 

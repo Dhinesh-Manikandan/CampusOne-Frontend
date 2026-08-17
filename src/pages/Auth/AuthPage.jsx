@@ -102,6 +102,21 @@ export const AuthPage = ({ onLoginSuccess }) => {
     setError('');
   };
 
+  const getRoleDefaultPath = (userObj) => {
+    if (!userObj) return '/events';
+    const roles = new Set();
+    if (userObj.role) roles.add(String(userObj.role).replace(/^ROLE_/, '').toUpperCase());
+    if (Array.isArray(userObj.roles)) {
+      userObj.roles.forEach(r => {
+        const val = typeof r === 'string' ? r : (r.roleName || r.name || '');
+        if (val) roles.add(String(val).replace(/^ROLE_/, '').toUpperCase());
+      });
+    }
+    const roleList = Array.from(roles);
+    if (roleList.includes('APP_ADMIN') || roleList.includes('ADMIN')) return '/admin-dashboard';
+    return '/dashboard';
+  };
+
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     if (!loginData.identifier.trim() || !loginData.password) {
@@ -119,7 +134,12 @@ export const AuthPage = ({ onLoginSuccess }) => {
         onLoginSuccess(localStorage.getItem('gather_token'), res?.user);
       }
       if (navigate) {
-        try { navigate(from, { replace: true }); } catch (err) {}
+        const loggedInUser = res?.user || JSON.parse(localStorage.getItem('gather_user') || '{}');
+        const defaultPath = getRoleDefaultPath(loggedInUser);
+        const targetPath = (!from || from === '/' || from === '/access-denied' || from === '/login' || from === '/signup')
+          ? defaultPath
+          : from;
+        try { navigate(targetPath, { replace: true }); } catch (err) {}
       }
     } catch (err) {
       setError(formatErrorMessage(err.message || 'Invalid credentials. Please check your details.'));

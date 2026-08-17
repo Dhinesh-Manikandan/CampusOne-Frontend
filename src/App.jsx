@@ -18,22 +18,30 @@ import { ThemeProvider } from './context/ThemeContext';
 import { Dashboard } from './pages/Dashboard/Dashboard';
 import { AppAdminRequestsPage } from './pages/Admin/AppAdminRequestsPage';
 import { AppAdminsManagementPage } from './pages/Admin/AppAdminsManagementPage';
+import { EventAdminsManagementPage } from './pages/Admin/EventAdminsManagementPage';
 import { Profile } from './pages/Profile/Profile';
 import AccessDenied from './pages/AccessDenied/AccessDenied';
 import { apiClient } from './services/apiClient';
 
 const TAB_PATH_MAP = {
-  dashboard: '/dashboard',
-  admin_dashboard: '/admin-dashboard',
-  events: '/events',
-  my_registered_events: '/my-registered-events',
-  my_events: '/my-events',
-  participants: '/participants',
-  announcements: '/announcements',
-  admin_requests: '/admin-requests',
-  app_admins: '/app-admins',
-  profile: '/profile',
-  access_denied: '/access-denied',
+  'dashboard': '/dashboard',
+  'admin_dashboard': '/admin-dashboard',
+  'events': '/events',
+  'my_registered_events': '/my-registered-events',
+  'my_events': '/my-events',
+  'participants': '/participants',
+  'announcements': '/announcements',
+  'admin_announcements': '/admin-announcements',
+  'admin_requests': '/admin-requests',
+  'event_admin_requests': '/event-admin-requests',
+  'app_admins': '/app-admins',
+  'event_admins': '/event-admins',
+  'profile': '/profile/view',
+  'profile_view': '/profile/view',
+  'profile_edit': '/profile/edit',
+  'profile_password': '/profile/password',
+  'profile_request_admin': '/profile/request-admin',
+  'access_denied': '/access-denied',
 };
 
 const PATH_TAB_MAP = {
@@ -44,27 +52,68 @@ const PATH_TAB_MAP = {
   '/my-events': 'my_events',
   '/participants': 'participants',
   '/announcements': 'announcements',
+  '/admin-announcements': 'admin_announcements',
   '/admin-requests': 'admin_requests',
+  '/event-admin-requests': 'event_admin_requests',
   '/app-admins': 'app_admins',
+  '/event-admins': 'event_admins',
   '/profile': 'profile',
   '/access-denied': 'access_denied',
 };
 
 function MainApp() {
-  const { user: authUser, token: authToken, logout: authLogout } = useAuth();
+  const { user: authUser, token: authToken, logout: authLogout, loading: authLoading } = useAuth();
   const [token, setToken] = useState(() => authToken || localStorage.getItem('gather_token') || '');
-  const [user, setUser] = useState(authUser || null);
+  const [user, setUser] = useState(() => {
+    if (authUser) return authUser;
+    try {
+      const stored = localStorage.getItem('gather_user');
+      return stored ? JSON.parse(stored) : null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [accessDeniedMessage, setAccessDeniedMessage] = useState('');
 
-  const userRole = (user?.role || authUser?.role || '').toUpperCase();
-  const isAppAdmin = userRole === 'APP_ADMIN' || (Array.isArray(user?.roles || authUser?.roles) && (user?.roles || authUser?.roles).some(r => (typeof r === 'string' ? r : r.roleName) === 'ROLE_APP_ADMIN' || r === 'APP_ADMIN'));
-  const isEventAdmin = isAppAdmin || userRole === 'EVENT_ADMIN' || (Array.isArray(user?.roles || authUser?.roles) && (user?.roles || authUser?.roles).some(r => (typeof r === 'string' ? r : r.roleName) === 'ROLE_EVENT_ADMIN' || r === 'EVENT_ADMIN'));
+  useEffect(() => {
+    if (authUser) {
+      setUser(authUser);
+    }
+  }, [authUser]);
+
+  const effectiveUser = user || authUser || (() => {
+    try {
+      const stored = localStorage.getItem('gather_user');
+      return stored ? JSON.parse(stored) : null;
+    } catch (e) {
+      return null;
+    }
+  })();
+
+  const getRoleStrings = (u) => {
+    if (!u) return [];
+    const roles = new Set();
+    if (u.role) roles.add(String(u.role).replace(/^ROLE_/, '').toUpperCase());
+    if (Array.isArray(u.roles)) {
+      u.roles.forEach(r => {
+        const val = typeof r === 'string' ? r : (r.roleName || r.name || '');
+        if (val) roles.add(String(val).replace(/^ROLE_/, '').toUpperCase());
+      });
+    }
+    return Array.from(roles);
+  };
+
+  const userRolesList = getRoleStrings(effectiveUser);
+  const isAppAdmin = userRolesList.includes('APP_ADMIN') || userRolesList.includes('ADMIN');
+  const isEventAdmin = isAppAdmin || userRolesList.includes('EVENT_ADMIN');
 
   const location = useLocation();
   const navigate = useNavigate();
 
   const getTabForPath = (path, isAdminApp, isAdminEvent) => {
+    if (path === '/event-admins') return isAdminApp ? 'event_admins' : 'access_denied';
     if (path === '/admin-requests') return (isAdminApp || isAdminEvent) ? 'admin_requests' : 'access_denied';
+    if (path === '/event-admin-requests') return (isAdminApp || isAdminEvent) ? 'event_admin_requests' : 'access_denied';
     if (path === '/app-admins') return isAdminApp ? 'app_admins' : 'access_denied';
     if (path === '/admin-dashboard') return isAdminApp ? 'admin_dashboard' : 'access_denied';
     if (path === '/my-events') return isAdminEvent ? 'my_events' : 'access_denied';
@@ -73,12 +122,12 @@ function MainApp() {
     if (path === '/events') return 'events';
     if (path === '/my-registered-events') return 'my_registered_events';
     if (path === '/announcements') return 'announcements';
-    if (path === '/profile') return 'profile';
+    if (path === '/admin-announcements') return isAdminEvent ? 'admin_announcements' : 'access_denied';
+    if (path.startsWith('/profile')) return 'profile';
     if (path === '/access-denied') return 'access_denied';
 
     if (isAdminApp) return 'admin_dashboard';
-    if (isAdminEvent) return 'my_events';
-    return 'events';
+    return 'dashboard';
   };
 
   // App Navigation Tabs
@@ -100,23 +149,38 @@ function MainApp() {
   }, [navigate]);
 
   useEffect(() => {
+    if (authLoading) return;
+
     const expectedTab = getTabForPath(location.pathname, isAppAdmin, isEventAdmin);
     setActiveTab(expectedTab);
 
-    if (expectedTab === 'access_denied' && !accessDeniedMessage) {
-      setAccessDeniedMessage('You don’t currently have permission to view this section. You can request admin privileges or return to your campus events dashboard.');
+    if (expectedTab === 'access_denied') {
+      if (!accessDeniedMessage) {
+        setAccessDeniedMessage('You don’t currently have permission to view this section. You can request admin privileges or return to your campus events dashboard.');
+      }
+      if (location.pathname !== '/access-denied') {
+        navigate('/access-denied', { replace: true });
+      }
+      return;
     }
 
-    const canonicalPath = TAB_PATH_MAP[expectedTab] || '/events';
-    if (location.pathname === '/' || !PATH_TAB_MAP[location.pathname] || (PATH_TAB_MAP[location.pathname] && PATH_TAB_MAP[location.pathname] !== expectedTab && expectedTab !== 'access_denied')) {
+    if (location.pathname === '/') {
+      const canonicalPath = TAB_PATH_MAP[expectedTab] || '/events';
       navigate(canonicalPath, { replace: true });
     }
-  }, [location.pathname, isAppAdmin, isEventAdmin, navigate]);
+  }, [location.pathname, isAppAdmin, isEventAdmin, authLoading, navigate]);
 
   const handleTabChange = (tabOrFn) => {
     const nextTab = typeof tabOrFn === 'function' ? tabOrFn(activeTab) : tabOrFn;
+    let targetPath = TAB_PATH_MAP[nextTab];
+    if (!targetPath) {
+      if (typeof nextTab === 'string' && nextTab.startsWith('/')) {
+        targetPath = nextTab;
+      } else {
+        targetPath = '/events';
+      }
+    }
     setActiveTab(nextTab);
-    const targetPath = TAB_PATH_MAP[nextTab] || '/events';
     if (location.pathname !== targetPath) {
       navigate(targetPath);
     }
@@ -280,6 +344,17 @@ function MainApp() {
 
   // 3. Fetch Dashboard Summary
   const loadDashboardSummary = async (userId) => {
+    const isUserAdmin = isEventAdmin || isAppAdmin;
+    if (!isUserAdmin) {
+      setDashboardSummary({
+        totalEvents: events.length,
+        upcomingEvents: events.filter(e => e.status === 'UPCOMING' || e.status === 'PUBLISHED').length,
+        completedEvents: events.filter(e => e.status === 'COMPLETED').length,
+        cancelledEvents: events.filter(e => e.status === 'CANCELLED').length,
+        totalRegistrationsSum: events.reduce((sum, e) => sum + (e.registeredCount || 0), 0)
+      });
+      return;
+    }
     try {
       const targetId = userId || user?.id || 1;
       const res = await apiClient.fetchWithAuth(`/api/events/admin/${targetId}/dashboard`);
@@ -405,12 +480,25 @@ function MainApp() {
     const receivedToken = loginData?.token || localStorage.getItem('gather_token');
     setToken(receivedToken);
     getCurrentUser().then(u => {
+      setUser(u);
       loadEvents();
       if (u?.id) {
         loadDashboardSummary(u.id);
         loadUserRegistrations(u.id);
       }
       showToast(`Welcome back, ${u?.name || 'User'}!`);
+
+      const uRole = (u?.role || '').toUpperCase();
+      const uIsAppAdmin = uRole === 'APP_ADMIN' || (Array.isArray(u?.roles) && u.roles.some(r => r === 'APP_ADMIN' || r?.roleName === 'ROLE_APP_ADMIN'));
+      const uIsEventAdmin = uIsAppAdmin || uRole === 'EVENT_ADMIN' || (Array.isArray(u?.roles) && u.roles.some(r => r === 'EVENT_ADMIN' || r?.roleName === 'ROLE_EVENT_ADMIN'));
+
+      let destPath = '/dashboard';
+      if (uIsAppAdmin) destPath = '/admin-dashboard';
+      else destPath = '/dashboard';
+
+      if (window.location.pathname === '/' || window.location.pathname === '/access-denied') {
+        navigate(destPath, { replace: true });
+      }
     });
   };
 
@@ -503,7 +591,7 @@ function MainApp() {
         method: 'DELETE'
       });
       if (res.ok) {
-        showToast(`Removed ${participantName} from event`);
+        showToast(`Registration Cancelled for ${participantName}`);
         loadParticipants(eventId, participantSearch);
         loadEvents();
         loadParticipantCount(eventId);
@@ -630,6 +718,8 @@ function MainApp() {
     // AuthContext.logout() already removes gather_* keys;
     // clear any remaining legacy keys here just in case
     localStorage.removeItem('token');
+    sessionStorage.removeItem('has_seen_app_admin_welcome');
+    sessionStorage.removeItem('has_seen_dashboard_welcome');
     setToken('');
     setUser(null);
     setEvents([]);
@@ -637,12 +727,16 @@ function MainApp() {
     showToast('Logged out successfully');
   };
 
-  const isEventCreator = (event) => user && (String(event.createdBy) === String(user.id) || user.role === 'ADMIN' || user.role === 'APP_ADMIN');
+  const isEventCreator = (event) => {
+    if (!user || !event) return false;
+    const creatorId = typeof event.createdBy === 'object' ? event.createdBy?.id : event.createdBy;
+    return String(creatorId) === String(user.id) || (event.organizerEmail && event.organizerEmail === user.email);
+  };
 
   const filteredEvents = events.filter(e => {
     const matchesSearch = e.title?.toLowerCase().includes(catalogSearch.toLowerCase()) ||
-                          e.category?.toLowerCase().includes(catalogSearch.toLowerCase()) ||
-                          e.venue?.toLowerCase().includes(catalogSearch.toLowerCase());
+      e.category?.toLowerCase().includes(catalogSearch.toLowerCase()) ||
+      e.venue?.toLowerCase().includes(catalogSearch.toLowerCase());
     const matchesCategory = categoryFilter === 'ALL' || e.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
@@ -661,7 +755,7 @@ function MainApp() {
     <div className="official-layout">
       <Toast toast={toast} />
 
-      <SidebarNav 
+      <SidebarNav
         isSidebarOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
         activeTab={activeTab}
@@ -673,30 +767,37 @@ function MainApp() {
       />
 
       <div className={`official-main-content ${isSidebarOpen ? '' : 'collapsed'}`}>
-        <Header 
-          user={user} 
-          logout={logout} 
-          activeTab={activeTab} 
-          isSidebarOpen={isSidebarOpen} 
-          toggleSidebar={toggleSidebar} 
-        />
+        {/* Hide top header bar on dashboard pages — controls live in the orange hero instead */}
+        {activeTab !== 'dashboard' && activeTab !== 'admin_dashboard' && (
+          <Header
+            user={user}
+            logout={logout}
+            activeTab={activeTab}
+            isSidebarOpen={isSidebarOpen}
+            toggleSidebar={toggleSidebar}
+          />
+        )}
 
         {/* Main Tab Content */}
         <main className="main-content" style={{ padding: 0 }}>
           {activeTab === 'dashboard' && (
-            <DashboardTab 
+            <DashboardTab
               user={user}
+              logout={logout}
               dashboardSummary={dashboardSummary}
               events={events}
+              userRegistrations={userRegistrations}
+              announcements={announcements}
               openCreateEventModal={openCreateEventModal}
               setActiveTab={handleTabChange}
+              viewEventDetails={viewEventDetails}
             />
           )}
 
           {activeTab === 'admin_dashboard' && <Dashboard />}
 
           {activeTab === 'events' && (
-            <EventsCatalogTab 
+            <EventsCatalogTab
               catalogSearch={catalogSearch}
               setCatalogSearch={setCatalogSearch}
               categoryFilter={categoryFilter}
@@ -718,7 +819,7 @@ function MainApp() {
           )}
 
           {activeTab === 'my_registered_events' && (
-            <StudentRegisteredEventsTab 
+            <StudentRegisteredEventsTab
               userRegistrations={userRegistrations}
               events={events}
               handleCancelRegistration={handleCancelRegistration}
@@ -728,7 +829,7 @@ function MainApp() {
           )}
 
           {activeTab === 'my_events' && (
-            <MyEventsTab 
+            <MyEventsTab
               events={events}
               user={user}
               openCreateEventModal={openCreateEventModal}
@@ -746,7 +847,7 @@ function MainApp() {
           )}
 
           {activeTab === 'participants' && (
-            <ParticipantsTab 
+            <ParticipantsTab
               events={events}
               user={user}
               selectedEventId={selectedEventId}
@@ -760,7 +861,7 @@ function MainApp() {
           )}
 
           {activeTab === 'announcements' && (
-            <AnnouncementsTab 
+            <AnnouncementsTab
               events={events}
               user={user}
               selectedEventId={selectedEventId}
@@ -774,24 +875,47 @@ function MainApp() {
               announcements={announcements}
               openEditAnnouncement={openEditAnnouncement}
               handleDeleteAnnouncement={handleDeleteAnnouncement}
+              registeredEventIds={registeredEventIds}
+              isReadOnlyView={true}
             />
           )}
 
-          {activeTab === 'admin_requests' && <AppAdminRequestsPage />}
+          {activeTab === 'admin_announcements' && (
+            <AnnouncementsTab
+              events={events}
+              user={user}
+              selectedEventId={selectedEventId}
+              setSelectedEventId={setSelectedEventId}
+              loadAnnouncements={loadAnnouncements}
+              editingAnnouncement={editingAnnouncement}
+              announcementForm={announcementForm}
+              setAnnouncementForm={setAnnouncementForm}
+              handleSaveAnnouncement={handleSaveAnnouncement}
+              cancelEditAnnouncement={cancelEditAnnouncement}
+              announcements={announcements}
+              openEditAnnouncement={openEditAnnouncement}
+              handleDeleteAnnouncement={handleDeleteAnnouncement}
+              registeredEventIds={registeredEventIds}
+              isReadOnlyView={false}
+            />
+          )}
+
+          {(activeTab === 'admin_requests' || activeTab === 'event_admin_requests') && <AppAdminRequestsPage />}
           {activeTab === 'app_admins' && <AppAdminsManagementPage />}
+          {activeTab === 'event_admins' && <EventAdminsManagementPage />}
           {activeTab === 'profile' && <Profile />}
           {activeTab === 'access_denied' && (
-            <AccessDenied 
-              message={accessDeniedMessage} 
-              user={user} 
-              setActiveTab={handleTabChange} 
+            <AccessDenied
+              message={accessDeniedMessage}
+              user={user}
+              setActiveTab={handleTabChange}
             />
           )}
         </main>
       </div>
 
       {/* Modals */}
-      <EventModal 
+      <EventModal
         showEventModal={showEventModal}
         setShowEventModal={setShowEventModal}
         editingEvent={editingEvent}
@@ -801,7 +925,7 @@ function MainApp() {
         showToast={showToast}
       />
 
-      <EventDetailsModal 
+      <EventDetailsModal
         showDetailsModal={showDetailsModal}
         setShowDetailsModal={setShowDetailsModal}
         selectedEventDetails={selectedEventDetails}

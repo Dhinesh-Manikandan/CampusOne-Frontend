@@ -402,7 +402,7 @@ export const AppAdminsManagementPage = () => {
                     className="form-control"
                     value={requestStatusFilter}
                     onChange={(e) => setRequestStatusFilter(e.target.value)}
-                    style={{ height: '36px', fontSize: '0.85rem', padding: '0 10px', borderRadius: '8px', minWidth: '130px' }}
+                    style={{ padding: '0.45rem 2.2rem 0.45rem 0.85rem', fontSize: '0.875rem', lineHeight: '1.4', borderRadius: '8px', minWidth: '130px', cursor: 'pointer' }}
                   >
                     <option value="ALL">All States</option>
                     <option value="PENDING">Pending</option>
@@ -451,6 +451,12 @@ export const AppAdminsManagementPage = () => {
                   const userDept = reqUser.department ? `Department of ${reqUser.department}` : '';
                   const userYear = reqUser.year ? `Year ${reqUser.year}` : '';
 
+                  const reviewerObj = req.reviewedBy || {};
+                  const reviewerName = typeof reviewerObj === 'object'
+                    ? (reviewerObj.fullName || reviewerObj.name || reviewerObj.email)
+                    : String(reviewerObj || '');
+                  const displayReviewer = reviewerName || (req.status !== 'PENDING' ? 'App Admin' : null);
+
                   return (
                     <div key={req.id} className="card" style={{ padding: '1.25rem', border: '1px solid var(--card-border)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
@@ -472,10 +478,19 @@ export const AppAdminsManagementPage = () => {
                         <p style={{ fontSize: '0.9rem', fontStyle: 'italic' }}>"{req.requestReason}"</p>
                       </div>
 
-                      {req.remarks && (
-                        <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-                          <strong>Remarks:</strong> {req.remarks}
-                        </p>
+                      {(displayReviewer || req.remarks) && (
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', background: 'rgba(255,255,255,0.03)', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--card-border)' }}>
+                          {displayReviewer && (
+                            <span style={{ marginRight: '1rem' }}>
+                              <strong>Reviewed by:</strong> <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{displayReviewer}</span>
+                            </span>
+                          )}
+                          {req.remarks && (
+                            <span>
+                              <strong>Remarks:</strong> {req.remarks}
+                            </span>
+                          )}
+                        </div>
                       )}
 
                       {req.status === 'PENDING' && (
@@ -525,7 +540,7 @@ export const AppAdminsManagementPage = () => {
               </div>
 
               <p style={{ fontSize: '0.9rem', color: '#d4d4d8', marginBottom: '1.25rem', lineHeight: 1.5 }}>
-                Rejecting privilege request for <strong style={{ color: '#ffffff' }}>{rejectModalData.studentName}</strong>. Provide custom rejection remarks below for auditing:
+                Rejecting privilege request for <strong style={{ color: '#ffffff' }}>{rejectModalData.studentName}</strong>. Provide rejection remarks below for auditing:
               </p>
 
               <form onSubmit={handleConfirmReject}>
@@ -549,7 +564,7 @@ export const AppAdminsManagementPage = () => {
                     type="button"
                     className="btn btn-secondary btn-sm"
                     onClick={() => setRejectModalData(null)}
-                    style={{ background: '#272522', color: '#d4d4d8', border: '1px solid #383531', borderRadius: '8px', padding: '0.5rem 1.15rem', fontWeight: 600, cursor: 'pointer' }}
+                    style={{ background: '#383531', color: '#ffffff', border: '1px solid #524e48', borderRadius: '8px', padding: '0.5rem 1.2rem', fontWeight: 700, cursor: 'pointer' }}
                   >
                     Cancel
                   </button>

@@ -106,6 +106,8 @@ export const AuthProvider = ({ children }) => {
   // ── Login ──
   const login = async (identifier, password) => {
     setLoading(true);
+    sessionStorage.removeItem('gather_welcomed');
+    sessionStorage.removeItem('gather_admin_welcomed');
     try {
       const response = await authService.login({ identifier, password });
 
@@ -154,6 +156,8 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem(STORAGE_KEYS.TOKEN);
     localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USER);
+    sessionStorage.removeItem('gather_welcomed');
+    sessionStorage.removeItem('gather_admin_welcomed');
   };
 
   return (

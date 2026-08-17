@@ -450,6 +450,38 @@
 }
 [data-theme='dark'] .form-control::placeholder { color: #6E6B62; }
 
+select.form-control {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding: 0.65rem 2.5rem 0.65rem 0.95rem !important;
+  line-height: 1.4 !important;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238C897F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.85rem center !important;
+  background-size: 16px 16px !important;
+}
+
+[data-theme='dark'] select.form-control {
+  background-color: #1C1917 !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23B8B3A8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.85rem center !important;
+  background-size: 16px 16px !important;
+}
+
+select.form-control option {
+  background-color: #FFFFFF;
+  color: #1A1915;
+  padding: 8px 12px;
+}
+
+[data-theme='dark'] select.form-control option {
+  background-color: #1C1917;
+  color: #F0EBE4;
+}
+
 .form-control:focus {
   outline: none;
   border-color: #D97757;

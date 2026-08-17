@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Shield,
   Building,
@@ -24,7 +25,8 @@ import {
   ChevronDown,
   ChevronUp,
   CheckSquare,
-  Square
+  Square,
+  RotateCcw
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { authService } from '../../services/authService';
@@ -33,14 +35,42 @@ import { formatRole, formatRoleClass } from '../../utils/formatRole';
 import { formatDateDMY } from '../../utils/formatDate';
 import './Profile.css';
 
+const getTabFromPath = (path) => {
+  if (path === '/profile/edit') return 'edit';
+  if (path === '/profile/password') return 'password';
+  if (path === '/profile/request-admin' || path === '/profile/request_admin') return 'request_admin';
+  return 'view';
+};
+
 export const Profile = () => {
   const { user, updateUser } = useAuth();
-  const [activeTab, setActiveTab] = useState('view'); // 'view', 'edit', 'password', 'request_admin'
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const userRolesList = (user?.roles || []).map(r => typeof r === 'string' ? r.replace('ROLE_', '') : ((r && r.roleName) ? r.roleName.replace('ROLE_', '') : 'STUDENT'));
   const currentRole = (user?.role || '').replace('ROLE_', '');
   const hasAppAdminRole = currentRole === 'APP_ADMIN' || userRolesList.includes('APP_ADMIN');
   const hasEventAdminRole = hasAppAdminRole || currentRole === 'EVENT_ADMIN' || userRolesList.includes('EVENT_ADMIN');
+
+  const [activeTab, setActiveTabState] = useState(() => getTabFromPath(location.pathname));
+
+  useEffect(() => {
+    let currentTab = getTabFromPath(location.pathname);
+    if (hasAppAdminRole && currentTab === 'request_admin') {
+      currentTab = 'view';
+      navigate('/profile/view', { replace: true });
+    }
+    setActiveTabState(currentTab);
+  }, [location.pathname, hasAppAdminRole, navigate]);
+
+  const handleTabChange = (tabKey) => {
+    setActiveTabState(tabKey);
+    let targetPath = '/profile/view';
+    if (tabKey === 'edit') targetPath = '/profile/edit';
+    else if (tabKey === 'password') targetPath = '/profile/password';
+    else if (tabKey === 'request_admin') targetPath = '/profile/request-admin';
+    navigate(targetPath);
+  };
 
   // Edit Profile Form State
   const [profileForm, setProfileForm] = useState({
@@ -322,28 +352,30 @@ export const Profile = () => {
         <div className="profile-tabs">
           <button
             className={`tab-btn ${activeTab === 'view' ? 'active' : ''}`}
-            onClick={() => setActiveTab('view')}
+            onClick={() => handleTabChange('view')}
           >
             <User size={16} /> View Profile
           </button>
           <button
             className={`tab-btn ${activeTab === 'edit' ? 'active' : ''}`}
-            onClick={() => setActiveTab('edit')}
+            onClick={() => handleTabChange('edit')}
           >
             <Edit3 size={16} /> Edit Profile
           </button>
           <button
             className={`tab-btn ${activeTab === 'password' ? 'active' : ''}`}
-            onClick={() => setActiveTab('password')}
+            onClick={() => handleTabChange('password')}
           >
             <Key size={16} /> Change Password
           </button>
-          <button
-            className={`tab-btn ${activeTab === 'request_admin' ? 'active' : ''}`}
-            onClick={() => setActiveTab('request_admin')}
-          >
-            <ShieldAlert size={16} /> Request Admin Rights
-          </button>
+          {!hasAppAdminRole && (
+            <button
+              className={`tab-btn ${activeTab === 'request_admin' ? 'active' : ''}`}
+              onClick={() => handleTabChange('request_admin')}
+            >
+              <ShieldAlert size={16} /> Request Admin Rights
+            </button>
+          )}
         </div>
       </div>
 
@@ -617,81 +649,37 @@ export const Profile = () => {
       )}
 
       {/* Tab 4: Request Admin Rights */}
-      {activeTab === 'request_admin' && (
+      {!hasAppAdminRole && activeTab === 'request_admin' && (
         <div className="card form-card">
-          <div className="form-card-header">
-            <h2><ShieldAlert size={20} /> Request Administrative Privileges</h2>
-            <p>Select the admin roles you wish to apply for and provide justification for evaluation by Application Admins.</p>
-          </div>
-
-          {/* Submitted Request Audit History */}
-          {combinedRequests.length > 0 && (
-            <div style={{ marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text-main)' }}>
-                <Clock size={16} style={{ display: 'inline', marginRight: '6px' }} /> Submitted Request Status & Audit History
-              </h3>
-              {combinedRequests.map((req, index) => {
-                const reviewer = req.reviewedBy || {};
-                const reviewerName = reviewer.fullName || reviewer.name || reviewer.email || 'Application Admin';
-                const reviewerEmail = reviewer.email ? `(${reviewer.email})` : '';
-
-                return (
-                  <div
-                    key={`${req.roleType}-${req.id}`}
-                    style={{
-                      padding: '1.25rem',
-                      borderRadius: '10px',
-                      border: req.status === 'REJECTED' ? '1px solid #f43f5e' : req.status === 'APPROVED' ? '1px solid #10b981' : '1px solid var(--card-border)',
-                      background: req.status === 'REJECTED' ? 'rgba(244, 63, 94, 0.06)' : req.status === 'APPROVED' ? 'rgba(16, 185, 129, 0.06)' : 'var(--bg-tertiary)'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span className="badge" style={{ background: '#3b82f6', color: '#fff', fontSize: '0.75rem', fontWeight: 700 }}>
-                          {req.roleLabel} Request
-                        </span>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
-                          Submitted {req.requestedAt ? formatDateDMY(req.requestedAt) : 'recently'}
-                        </span>
-                      </div>
-                      <span className={`badge ${req.status === 'PENDING' ? 'badge-warning' : req.status === 'APPROVED' ? 'badge-success' : 'badge-danger'}`}>
-                        {req.status}
-                      </span>
-                    </div>
-
-                    <div style={{ background: 'var(--bg-card)', padding: '0.65rem 0.85rem', borderRadius: '6px', marginBottom: '0.75rem', border: '1px solid var(--card-border)' }}>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>
-                        Justification Submitted:
-                      </span>
-                      <p style={{ fontSize: '0.875rem', margin: 0, fontStyle: 'italic' }}>
-                        "{req.requestReason}"
-                      </p>
-                    </div>
-
-                    {req.status === 'REJECTED' && (
-                      <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px dashed rgba(244, 63, 94, 0.4)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#e11d48', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.35rem' }}>
-                          <XCircle size={16} /> Rejection Remarks:
-                        </div>
-                        <p style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: 600, margin: '0 0 0.5rem 0', background: 'var(--bg-card)', padding: '0.6rem 0.85rem', borderRadius: '6px', border: '1px solid rgba(244, 63, 94, 0.3)' }}>
-                          "{req.remarks || 'No specific remarks provided.'}"
-                        </p>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block' }}>
-                          Reviewed & Rejected by Admin: <strong>{reviewerName}</strong> {reviewerEmail} {req.reviewedAt ? `on ${formatDateDMY(req.reviewedAt)}` : ''}
-                        </span>
-                      </div>
-                    )}
-
-                    {req.status === 'APPROVED' && (
-                      <div style={{ marginTop: '0.5rem', fontSize: '0.825rem', color: '#10b981', fontWeight: 600 }}>
-                        ✓ Approved by Admin: <strong>{reviewerName}</strong> {reviewerEmail} {req.reviewedAt ? `on ${formatDateDMY(req.reviewedAt)}` : ''}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+          <div className="form-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ShieldAlert size={20} /> Request Administrative Privileges
+              </h2>
+              <p style={{ margin: '4px 0 0 0' }}>
+                Select the admin roles you wish to apply for and provide justification for evaluation by Application Admins.
+              </p>
             </div>
-          )}
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="btn btn-secondary"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                padding: '0.45rem 0.95rem',
+                borderRadius: '8px',
+                cursor: 'pointer'
+              }}
+              title="Refresh page status"
+            >
+              <RotateCcw size={15} />
+              Refresh Status
+            </button>
+          </div>
 
           {requestSuccess && (
             <div className="alert alert-success">
@@ -711,19 +699,29 @@ export const Profile = () => {
                 Select Role(s) to Request *
               </label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {/* Event Admin Checkbox */}
+                {/* Event Admin Selection Card */}
                 <label 
                   style={{
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '12px 14px',
-                    borderRadius: '8px',
-                    border: (hasEventAdminRole || hasPendingEventAdmin) ? '1px solid var(--border-subtle)' : requestEventAdmin ? '1px solid #3b82f6' : '1px solid var(--card-border)',
-                    background: (hasEventAdminRole || hasPendingEventAdmin) ? 'rgba(255,255,255,0.02)' : requestEventAdmin ? 'rgba(59, 130, 246, 0.08)' : 'var(--bg-card)',
-                    opacity: (hasEventAdminRole || hasPendingEventAdmin) ? 0.6 : 1,
+                    alignItems: 'flex-start',
+                    gap: '14px',
+                    padding: '14px 18px',
+                    borderRadius: '12px',
+                    border: (hasEventAdminRole || hasPendingEventAdmin)
+                      ? '1px solid var(--card-border)'
+                      : requestEventAdmin
+                      ? '1.5px solid #D97757'
+                      : '1px solid var(--card-border)',
+                    background: (hasEventAdminRole || hasPendingEventAdmin)
+                      ? 'var(--bg-card)'
+                      : requestEventAdmin
+                      ? 'rgba(217, 119, 87, 0.08)'
+                      : 'var(--bg-tertiary)',
+                    boxShadow: requestEventAdmin && !hasEventAdminRole && !hasPendingEventAdmin ? '0 4px 14px rgba(217, 119, 87, 0.15)' : 'none',
+                    opacity: (hasEventAdminRole || hasPendingEventAdmin) ? 0.85 : 1,
                     cursor: (hasEventAdminRole || hasPendingEventAdmin) ? 'not-allowed' : 'pointer',
-                    userSelect: 'none'
+                    userSelect: 'none',
+                    transition: 'all 0.2s ease'
                   }}
                 >
                   <input
@@ -731,33 +729,61 @@ export const Profile = () => {
                     checked={requestEventAdmin || hasEventAdminRole}
                     disabled={hasEventAdminRole || hasPendingEventAdmin}
                     onChange={(e) => setRequestEventAdmin(e.target.checked)}
-                    style={{ width: '18px', height: '18px', cursor: (hasEventAdminRole || hasPendingEventAdmin) ? 'not-allowed' : 'pointer' }}
+                    style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
                   />
-                  <div>
-                    <strong style={{ fontSize: '0.9rem', color: 'var(--text-main)' }}>Event Admin (`EVENT_ADMIN`)</strong>
-                    <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  <div style={{ flexShrink: 0, marginTop: '2px' }}>
+                    {hasEventAdminRole ? (
+                      <CheckCircle2 size={22} style={{ color: '#10b981' }} />
+                    ) : hasPendingEventAdmin ? (
+                      <Clock size={22} style={{ color: '#f59e0b' }} />
+                    ) : requestEventAdmin ? (
+                      <CheckSquare size={22} style={{ color: '#D97757' }} />
+                    ) : (
+                      <Square size={22} style={{ color: 'var(--text-muted)' }} />
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <strong style={{ fontSize: '0.95rem', color: 'var(--text-main)', fontWeight: 700 }}>
+                        Event Admin Access
+                      </strong>
+                      <span style={{ background: 'rgba(59, 130, 246, 0.14)', color: '#3b82f6', fontSize: '0.725rem', fontWeight: 800, padding: '2px 8px', borderRadius: '10px' }}>
+                        EVENT_ADMIN
+                      </span>
+                    </div>
+                    <span style={{ display: 'block', fontSize: '0.825rem', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.4 }}>
                       {hasEventAdminRole
-                        ? '✓ You already hold the Event Admin role.'
+                        ? '✓ You currently hold the Event Admin role.'
                         : hasPendingEventAdmin
-                        ? '⏳ You already have a pending Event Admin request.'
-                        : 'Allows creating, managing, and publishing campus events and noticeboards.'}
+                        ? '⏳ You already have a pending Event Admin request awaiting admin approval.'
+                        : 'Allows creating, managing, and publishing campus events and noticeboard announcements.'}
                     </span>
                   </div>
                 </label>
 
-                {/* App Admin Checkbox */}
+                {/* App Admin Selection Card */}
                 <label 
                   style={{
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '12px 14px',
-                    borderRadius: '8px',
-                    border: (hasAppAdminRole || hasPendingAppAdmin) ? '1px solid var(--border-subtle)' : requestAppAdmin ? '1px solid #3b82f6' : '1px solid var(--card-border)',
-                    background: (hasAppAdminRole || hasPendingAppAdmin) ? 'rgba(255,255,255,0.02)' : requestAppAdmin ? 'rgba(59, 130, 246, 0.08)' : 'var(--bg-card)',
-                    opacity: (hasAppAdminRole || hasPendingAppAdmin) ? 0.6 : 1,
+                    alignItems: 'flex-start',
+                    gap: '14px',
+                    padding: '14px 18px',
+                    borderRadius: '12px',
+                    border: (hasAppAdminRole || hasPendingAppAdmin)
+                      ? '1px solid var(--card-border)'
+                      : requestAppAdmin
+                      ? '1.5px solid #D97757'
+                      : '1px solid var(--card-border)',
+                    background: (hasAppAdminRole || hasPendingAppAdmin)
+                      ? 'var(--bg-card)'
+                      : requestAppAdmin
+                      ? 'rgba(217, 119, 87, 0.08)'
+                      : 'var(--bg-tertiary)',
+                    boxShadow: requestAppAdmin && !hasAppAdminRole && !hasPendingAppAdmin ? '0 4px 14px rgba(217, 119, 87, 0.15)' : 'none',
+                    opacity: (hasAppAdminRole || hasPendingAppAdmin) ? 0.85 : 1,
                     cursor: (hasAppAdminRole || hasPendingAppAdmin) ? 'not-allowed' : 'pointer',
-                    userSelect: 'none'
+                    userSelect: 'none',
+                    transition: 'all 0.2s ease'
                   }}
                 >
                   <input
@@ -765,16 +791,34 @@ export const Profile = () => {
                     checked={requestAppAdmin || hasAppAdminRole}
                     disabled={hasAppAdminRole || hasPendingAppAdmin}
                     onChange={(e) => setRequestAppAdmin(e.target.checked)}
-                    style={{ width: '18px', height: '18px', cursor: (hasAppAdminRole || hasPendingAppAdmin) ? 'not-allowed' : 'pointer' }}
+                    style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
                   />
-                  <div>
-                    <strong style={{ fontSize: '0.9rem', color: 'var(--text-main)' }}>Application Admin (`APP_ADMIN`)</strong>
-                    <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  <div style={{ flexShrink: 0, marginTop: '2px' }}>
+                    {hasAppAdminRole ? (
+                      <CheckCircle2 size={22} style={{ color: '#10b981' }} />
+                    ) : hasPendingAppAdmin ? (
+                      <Clock size={22} style={{ color: '#f59e0b' }} />
+                    ) : requestAppAdmin ? (
+                      <CheckSquare size={22} style={{ color: '#D97757' }} />
+                    ) : (
+                      <Square size={22} style={{ color: 'var(--text-muted)' }} />
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <strong style={{ fontSize: '0.95rem', color: 'var(--text-main)', fontWeight: 700 }}>
+                        Application Admin Access
+                      </strong>
+                      <span style={{ background: 'rgba(168, 85, 247, 0.14)', color: '#a855f7', fontSize: '0.725rem', fontWeight: 800, padding: '2px 8px', borderRadius: '10px' }}>
+                        APP_ADMIN
+                      </span>
+                    </div>
+                    <span style={{ display: 'block', fontSize: '0.825rem', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.4 }}>
                       {hasAppAdminRole
-                        ? '✓ You already hold the Application Admin role.'
+                        ? '✓ You currently hold the Application Admin role.'
                         : hasPendingAppAdmin
-                        ? '⏳ You already have a pending Application Admin request.'
-                        : 'Full platform administration privileges, including reviewing user role requests.'}
+                        ? '⏳ You already have a pending Application Admin request awaiting review.'
+                        : 'Full platform administration privileges, including evaluating user privilege requests and managing administrators.'}
                     </span>
                   </div>
                 </label>
@@ -810,6 +854,179 @@ export const Profile = () => {
               </button>
             </div>
           </form>
+
+          {/* Submitted Request Audit History Banner Component at the End */}
+          {combinedRequests.length > 0 && (
+            <div style={{ marginTop: '2rem', borderTop: '1px solid var(--card-border)', paddingTop: '1.5rem', width: '100%' }}>
+              <button
+                type="button"
+                onClick={() => setShowHistoryLogs((prev) => !prev)}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justify: 'space-between',
+                  padding: '1.15rem 1.5rem',
+                  background: showHistoryLogs
+                    ? 'linear-gradient(135deg, rgba(217, 119, 87, 0.22) 0%, rgba(217, 119, 87, 0.08) 50%, var(--bg-tertiary) 100%)'
+                    : 'linear-gradient(135deg, rgba(217, 119, 87, 0.14) 0%, rgba(217, 119, 87, 0.04) 50%, var(--bg-tertiary) 100%)',
+                  borderRadius: '14px',
+                  border: '1.5px solid rgba(217, 119, 87, 0.45)',
+                  boxShadow: '0 4px 14px rgba(217, 119, 87, 0.1)',
+                  color: 'var(--text-main)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxSizing: 'border-box'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.15rem', flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      width: '42px',
+                      height: '42px',
+                      borderRadius: '10px',
+                      background: '#D97757',
+                      color: '#ffffff',
+                      display: 'grid',
+                      placeItems: 'center',
+                      flexShrink: 0,
+                      boxShadow: '0 2px 8px rgba(217, 119, 87, 0.35)',
+                      padding: 0
+                    }}
+                  >
+                    <Clock size={20} style={{ display: 'block', margin: 0, width: '20px', height: '20px' }} />
+                  </div>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text-main)' }}>
+                        Submitted Request Status & Audit History
+                      </h4>
+                      <span
+                        style={{
+                          background: '#D97757',
+                          color: '#ffffff',
+                          fontSize: '0.75rem',
+                          fontWeight: 800,
+                          padding: '2px 8px',
+                          borderRadius: '12px'
+                        }}
+                      >
+                        {combinedRequests.length}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', margin: 0, marginTop: '3px' }}>
+                      Click to expand and review all administrative role request evaluation logs
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginLeft: 'auto', flexShrink: 0 }}>
+                  <span
+                    style={{
+                      fontSize: '0.825rem',
+                      fontWeight: 700,
+                      padding: '0.4rem 1rem',
+                      borderRadius: '20px',
+                      background: showHistoryLogs ? '#D97757' : 'var(--bg-card)',
+                      color: showHistoryLogs ? '#ffffff' : 'var(--text-main)',
+                      border: '1px solid rgba(217, 119, 87, 0.35)',
+                      letterSpacing: '0.02em',
+                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)'
+                    }}
+                  >
+                    {showHistoryLogs ? 'Hide History' : 'View Audit Logs'}
+                  </span>
+                  {showHistoryLogs ? (
+                    <ChevronUp size={22} style={{ color: '#D97757' }} />
+                  ) : (
+                    <ChevronDown size={22} style={{ color: 'var(--text-muted)' }} />
+                  )}
+                </div>
+              </button>
+
+              {showHistoryLogs && (
+                <div
+                  style={{
+                    marginTop: '1.25rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '1rem',
+                    width: '100%',
+                    padding: '1.25rem',
+                    background: 'var(--bg-tertiary)',
+                    borderRadius: '14px',
+                    border: '1px solid var(--card-border)',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  {combinedRequests.map((req) => {
+                    const reviewer = req.reviewedBy || {};
+                    const reviewerName = reviewer.fullName || reviewer.name || reviewer.email || 'Application Admin';
+                    const reviewerEmail = reviewer.email ? `(${reviewer.email})` : '';
+                    const isRejected = req.status === 'REJECTED';
+                    const isApproved = req.status === 'APPROVED';
+
+                    return (
+                      <div
+                        key={`${req.roleType}-${req.id}`}
+                        style={{
+                          padding: '1.25rem',
+                          borderRadius: '12px',
+                          border: isRejected ? '1px solid #f43f5e' : isApproved ? '1px solid #10b981' : '1px solid #f59e0b',
+                          borderLeft: isRejected ? '5px solid #f43f5e' : isApproved ? '5px solid #10b981' : '5px solid #f59e0b',
+                          background: 'var(--bg-card)',
+                          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                              {req.roleLabel} Request
+                            </span>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                              • Submitted {req.requestedAt ? formatDateDMY(req.requestedAt) : 'recently'}
+                            </span>
+                          </div>
+                          <span className={`badge ${req.status === 'PENDING' ? 'badge-warning' : req.status === 'APPROVED' ? 'badge-success' : 'badge-danger'}`}>
+                            {req.status}
+                          </span>
+                        </div>
+
+                        <div style={{ background: 'var(--bg-tertiary)', padding: '0.75rem 0.95rem', borderRadius: '8px', marginBottom: '0.75rem', border: '1px solid var(--card-border)' }}>
+                          <span style={{ fontSize: '0.825rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '0.25rem' }}>
+                            Justification Submitted:
+                          </span>
+                          <p style={{ fontSize: '0.9rem', margin: 0, fontStyle: 'italic', color: 'var(--text-main)', fontWeight: 500 }}>
+                            "{req.requestReason}"
+                          </p>
+                        </div>
+
+                        {isRejected && (
+                          <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px dashed rgba(244, 63, 94, 0.4)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#e11d48', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.35rem' }}>
+                              <XCircle size={16} /> Rejection Remarks:
+                            </div>
+                            <p style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: 600, margin: '0 0 0.5rem 0', background: 'rgba(244, 63, 94, 0.08)', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid rgba(244, 63, 94, 0.3)' }}>
+                              "{req.remarks || 'No specific remarks provided.'}"
+                            </p>
+                            <span style={{ fontSize: '0.825rem', color: 'var(--text-main)', fontWeight: 600, display: 'block' }}>
+                              Reviewed & Rejected by Admin: <strong>{reviewerName}</strong> {reviewerEmail} {req.reviewedAt ? `on ${formatDateDMY(req.reviewedAt)}` : ''}
+                            </span>
+                          </div>
+                        )}
+
+                        {isApproved && (
+                          <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#059669', fontWeight: 700 }}>
+                            ✓ Approved by Admin: <strong>{reviewerName}</strong> {reviewerEmail} {req.reviewedAt ? `on ${formatDateDMY(req.reviewedAt)}` : ''}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

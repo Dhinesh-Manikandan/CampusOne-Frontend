@@ -20,6 +20,11 @@ export default function SidebarNav({
     return String(creatorId) === String(user?.id);
   }).length;
 
+  const catalogEventsCount = safeEvents.filter(e => {
+    const creatorId = typeof e.createdBy === 'object' ? e.createdBy?.id : e.createdBy;
+    return String(creatorId) !== String(user?.id);
+  }).length;
+
   // Robust Role Normalization
   const getRoleStrings = (u) => {
     if (!u) return [];
@@ -106,12 +111,12 @@ export default function SidebarNav({
 
             <button
               type="button"
-              className={`sidebar-nav-item ${activeTab === 'admin_requests' ? 'active' : ''}`}
-              onClick={() => setActiveTab('admin_requests')}
-              title="Admin Role Requests"
+              className={`sidebar-nav-item ${activeTab === 'event_admins' ? 'active' : ''}`}
+              onClick={() => setActiveTab('event_admins')}
+              title="Event Admin Management"
             >
-              <i className="fa-solid fa-user-shield"></i>
-              {isSidebarOpen && <span>Role Requests</span>}
+              <i className="fa-solid fa-user-check"></i>
+              {isSidebarOpen && <span>Event Admin Management</span>}
             </button>
           </>
         )}
@@ -120,6 +125,16 @@ export default function SidebarNav({
         {isEventAdmin && (
           <>
             {isSidebarOpen && <div className="nav-group-label">EVENT ADMIN SECTION</div>}
+            <button
+              type="button"
+              className={`sidebar-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+              onClick={() => setActiveTab('dashboard')}
+              title="Dashboard Overview"
+            >
+              <i className="fa-solid fa-chart-pie"></i>
+              {isSidebarOpen && <span>Dashboard Summary</span>}
+            </button>
+
             <button
               type="button"
               className={`sidebar-nav-item ${activeTab === 'my_events' ? 'active' : ''}`}
@@ -143,37 +158,41 @@ export default function SidebarNav({
 
             <button
               type="button"
-              className={`sidebar-nav-item ${activeTab === 'announcements' ? 'active' : ''}`}
-              onClick={() => setActiveTab('announcements')}
+              className={`sidebar-nav-item ${activeTab === 'admin_announcements' ? 'active' : ''}`}
+              onClick={() => setActiveTab('admin_announcements')}
               title="Noticeboard & Alerts"
             >
               <i className="fa-solid fa-bullhorn"></i>
               {isSidebarOpen && <span>Noticeboard & Alerts</span>}
             </button>
 
-            <button
-              type="button"
-              className={`sidebar-nav-item ${activeTab === 'admin_requests' || activeTab === 'event_admin_requests' ? 'active' : ''}`}
-              onClick={() => setActiveTab('admin_requests')}
-              title="Event Admin Role Requests"
-            >
-              <i className="fa-solid fa-user-check"></i>
-              {isSidebarOpen && <span>Event Admin Requests</span>}
-            </button>
+            {!isAppAdmin && (
+              <button
+                type="button"
+                className={`sidebar-nav-item ${activeTab === 'admin_requests' || activeTab === 'event_admin_requests' ? 'active' : ''}`}
+                onClick={() => setActiveTab('event_admin_requests')}
+                title="Event Admin Role Requests"
+              >
+                <i className="fa-solid fa-user-check"></i>
+                {isSidebarOpen && <span>Event Admin Requests</span>}
+              </button>
+            )}
           </>
         )}
 
-        {/* 3. NORMAL USER SECTION - Visible to All Roles (Students, Event Admins, App Admins) */}
+        {/* 3. NORMAL USER SECTION */}
         {isSidebarOpen && <div className="nav-group-label">USER SECTION</div>}
-        <button
-          type="button"
-          className={`sidebar-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-          onClick={() => setActiveTab('dashboard')}
-          title="Dashboard Summary"
-        >
-          <i className="fa-solid fa-chart-pie"></i>
-          {isSidebarOpen && <span>Dashboard Summary</span>}
-        </button>
+        {!isEventAdmin && !isAppAdmin && (
+          <button
+            type="button"
+            className={`sidebar-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+            onClick={() => setActiveTab('dashboard')}
+            title="Dashboard Summary"
+          >
+            <i className="fa-solid fa-chart-pie"></i>
+            {isSidebarOpen && <span>Dashboard Summary</span>}
+          </button>
+        )}
 
         <button
           type="button"
@@ -183,43 +202,30 @@ export default function SidebarNav({
         >
           <i className="fa-solid fa-calendar-days"></i>
           {isSidebarOpen && <span>All Campus Events</span>}
-          {isSidebarOpen && <span className="nav-badge">{safeEvents.length}</span>}
+          {isSidebarOpen && <span className="nav-badge">{catalogEventsCount}</span>}
         </button>
 
-        {/* Student View: My Registered Events */}
-        {isStudent && (
-          <button
-            type="button"
-            className={`sidebar-nav-item ${activeTab === 'my_registered_events' ? 'active' : ''}`}
-            onClick={() => setActiveTab('my_registered_events')}
-            title="My Registered Events"
-          >
-            <i className="fa-solid fa-ticket"></i>
-            {isSidebarOpen && <span>My Registered Events</span>}
-            {isSidebarOpen && registeredCount > 0 && <span className="nav-badge primary">{registeredCount}</span>}
-          </button>
-        )}
-
-        {!isEventAdmin && (
-          <button
-            type="button"
-            className={`sidebar-nav-item ${activeTab === 'announcements' ? 'active' : ''}`}
-            onClick={() => setActiveTab('announcements')}
-            title="Noticeboard & Alerts"
-          >
-            <i className="fa-solid fa-bullhorn"></i>
-            {isSidebarOpen && <span>Noticeboard & Alerts</span>}
-          </button>
-        )}
-
+        {/* My Registered Events: Available to ALL logged-in users */}
         <button
           type="button"
-          className={`sidebar-nav-item ${activeTab === 'profile' ? 'active' : ''}`}
-          onClick={() => setActiveTab('profile')}
-          title="My Profile & Admin Role Requests"
+          className={`sidebar-nav-item ${activeTab === 'my_registered_events' ? 'active' : ''}`}
+          onClick={() => setActiveTab('my_registered_events')}
+          title="My Registered Events"
         >
-          <i className="fa-solid fa-user-shield"></i>
-          {isSidebarOpen && <span>Profile & Admin Requests</span>}
+          <i className="fa-solid fa-ticket"></i>
+          {isSidebarOpen && <span>My Registered Events</span>}
+          {isSidebarOpen && registeredCount > 0 && <span className="nav-badge primary">{registeredCount}</span>}
+        </button>
+
+        {/* Noticeboard & Alerts: Available to ALL logged-in users */}
+        <button
+          type="button"
+          className={`sidebar-nav-item ${activeTab === 'announcements' ? 'active' : ''}`}
+          onClick={() => setActiveTab('announcements')}
+          title="Noticeboard & Alerts"
+        >
+          <i className="fa-solid fa-bullhorn"></i>
+          {isSidebarOpen && <span>Noticeboard & Alerts</span>}
         </button>
       </div>
 
