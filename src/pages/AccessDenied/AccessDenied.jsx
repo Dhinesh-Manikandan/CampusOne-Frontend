@@ -21,9 +21,9 @@ export const AccessDenied = ({
 
   const handleRequestPrivileges = () => {
     if (setActiveTab) {
-      setActiveTab('profile');
+      setActiveTab('profile_request_admin');
     } else {
-      window.location.href = '/profile';
+      window.location.href = '/profile/request-admin';
     }
   };
 

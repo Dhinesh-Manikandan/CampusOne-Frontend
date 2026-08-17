@@ -101,4 +101,22 @@ export const adminRequestService = {
   async removeApplicationAdmin(id) {
     return await apiClient.delete(`/admin/application-admins/${id}`);
   },
+
+  /**
+   * View all Event Admins
+   */
+  async getEventAdmins() {
+    try {
+      return await apiClient.get('/event-admin/event-admins');
+    } catch (e) {
+      return await apiClient.get('/admin/application-admins/event-admins');
+    }
+  },
+
+  /**
+   * Remove Event Admin
+   */
+  async removeEventAdmin(id) {
+    return await apiClient.delete(`/admin/application-admins/event-admins/${id}`);
+  },
 };

@@ -13,21 +13,41 @@ export default function AnnouncementsTab({
   cancelEditAnnouncement,
   announcements,
   openEditAnnouncement,
-  handleDeleteAnnouncement
+  handleDeleteAnnouncement,
+  registeredEventIds = new Set(),
+  isReadOnlyView = false
 }) {
   const isStudent = user?.role === 'STUDENT';
-  const availableEvents = isStudent
-    ? events
-    : events.filter(
-        e => String(e.createdBy) === String(user?.id) || user?.role === 'ADMIN' || user?.role === 'APP_ADMIN' || user?.role === 'EVENT_ADMIN'
-      );
+  const isAppAdmin = user?.role === 'ADMIN' || user?.role === 'APP_ADMIN' || (Array.isArray(user?.roles) && user.roles.some(r => r === 'APP_ADMIN' || r?.roleName === 'ROLE_APP_ADMIN'));
+  
+  // Read-only mode applies if isReadOnlyView is true OR user is a Student
+  const readOnly = isReadOnlyView || isStudent;
+
+  const isRegisteredEvent = (eventId) => {
+    if (!registeredEventIds) return false;
+    if (typeof registeredEventIds.has === 'function') return registeredEventIds.has(eventId);
+    if (Array.isArray(registeredEventIds)) return registeredEventIds.includes(eventId);
+    return false;
+  };
+
+  // In User Section Read-Only Noticeboard, restrict dropdown to ONLY user registered events!
+  const availableEvents = readOnly
+    ? events.filter(e => isRegisteredEvent(e.id))
+    : isAppAdmin
+      ? events
+      : events.filter(e => {
+          const creatorId = typeof e.createdBy === 'object' ? e.createdBy?.id : e.createdBy;
+          return String(creatorId) === String(user?.id) || (e.organizerEmail && e.organizerEmail === user?.email);
+        });
 
   return (
     <div>
       <div style={{ marginBottom: '20px' }}>
-        <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '24px' }}>Event Noticeboard & Announcements</h2>
+        <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '24px' }}>
+          {readOnly ? 'Campus Noticeboard & Broadcast Alerts' : 'Event Noticeboard Management'}
+        </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-          {isStudent ? 'View official broadcast alerts and updates for campus events' : 'Post broadcast updates and alerts for registered event participants'}
+          {readOnly ? 'View official broadcast alerts and updates for campus events' : 'Post broadcast updates and alerts for registered event participants'}
         </p>
       </div>
 
@@ -35,26 +55,32 @@ export default function AnnouncementsTab({
       <div className="glass-card">
         <div className="form-group">
           <label><i className="fa-solid fa-bullhorn"></i> Select Event Noticeboard</label>
-          <select 
-            value={selectedEventId || ''} 
-            onChange={e => {
-              const id = Number(e.target.value);
-              setSelectedEventId(id);
-              loadAnnouncements(id);
-            }}
-          >
-            <option value="">-- Choose an event --</option>
-            {availableEvents.map(e => (
-              <option key={e.id} value={e.id}>{e.title}</option>
-            ))}
-          </select>
+          {availableEvents.length === 0 && readOnly ? (
+            <p style={{ color: 'var(--text-muted)', fontSize: '13.5px', margin: '8px 0 0 0' }}>
+              You have not registered for any campus events yet. Register for events in <strong>All Campus Events</strong> to view official noticeboard broadcast alerts.
+            </p>
+          ) : (
+            <select 
+              value={selectedEventId || ''} 
+              onChange={e => {
+                const id = Number(e.target.value);
+                setSelectedEventId(id);
+                loadAnnouncements(id);
+              }}
+            >
+              <option value="">-- Choose an event --</option>
+              {availableEvents.map(e => (
+                <option key={e.id} value={e.id}>{e.title}</option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 
       {selectedEventId ? (
-        <div style={{ display: 'grid', gridTemplateColumns: isStudent ? '1fr' : '1fr 1fr', gap: '20px' }}>
-          {/* Post Form - Admin Only */}
-          {!isStudent && (
+        <div style={{ display: 'grid', gridTemplateColumns: readOnly ? '1fr' : '1fr 1fr', gap: '20px' }}>
+          {/* Post Form - Management Mode Only */}
+          {!readOnly && (
             <div className="glass-card">
               <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px', marginBottom: '16px' }}>
                 {editingAnnouncement ? 'Edit Announcement' : 'Post New Broadcast Update'}
@@ -121,28 +147,45 @@ export default function AnnouncementsTab({
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {announcements.map(item => (
-                  <div 
-                    key={item.id} 
-                    style={{
-                      background: 'rgba(255,255,255,0.03)',
-                      padding: '14px 16px',
-                      borderRadius: 'var(--radius-md)',
-                      borderLeft: `4px solid ${item.priority === 'URGENT' ? '#ef4444' : item.priority === 'IMPORTANT' ? '#f59e0b' : '#3b82f6'}`
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-                      <strong style={{ fontSize: '15px' }}>{item.title}</strong>
-                      <span className={`role-pill ${item.priority?.toLowerCase() || 'student'}`} style={{ fontSize: '10px' }}>
-                        {item.priority || 'NORMAL'}
-                      </span>
-                    </div>
+                {announcements.map(item => {
+                  const prio = (item.priority || 'NORMAL').toUpperCase();
+                  const prioColor = prio === 'URGENT' ? '#ef4444' : prio === 'IMPORTANT' ? '#f59e0b' : '#3b82f6';
+                  const prioBg = prio === 'URGENT' ? 'rgba(239, 68, 68, 0.14)' : prio === 'IMPORTANT' ? 'rgba(245, 158, 11, 0.14)' : 'rgba(59, 130, 246, 0.14)';
+
+                  return (
+                    <div 
+                      key={item.id} 
+                      style={{
+                        background: 'var(--bg-tertiary)',
+                        padding: '14px 16px',
+                        borderRadius: 'var(--radius-md)',
+                        borderLeft: `4px solid ${prioColor}`,
+                        border: '1px solid var(--card-border)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px', gap: '8px' }}>
+                        <strong style={{ fontSize: '15px', color: 'var(--text-main)' }}>{item.title}</strong>
+                        <span style={{ 
+                          background: prioBg, 
+                          color: prioColor, 
+                          fontSize: '0.725rem', 
+                          fontWeight: 800, 
+                          padding: '3px 10px', 
+                          borderRadius: '12px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          flexShrink: 0
+                        }}>
+                          {prio === 'URGENT' ? '🚨 URGENT' : prio === 'IMPORTANT' ? '⚠️ IMPORTANT' : 'ℹ️ NORMAL'}
+                        </span>
+                      </div>
                     <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px', lineHeight: 1.5 }}>
                       {item.content}
                     </p>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: 'var(--text-muted)' }}>
                       <span>{item.postedAt ? new Date(item.postedAt).toLocaleString() : 'Just now'}</span>
-                      {!isStudent && (
+                      {!readOnly && (
                         <div style={{ display: 'flex', gap: '6px' }}>
                           <button className="btn btn-secondary btn-sm" style={{ padding: '2px 8px', fontSize: '11px' }} onClick={() => openEditAnnouncement(item)}>
                             <i className="fa-solid fa-pen"></i> Edit
@@ -154,8 +197,9 @@ export default function AnnouncementsTab({
                       )}
                     </div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
+            </div>
             )}
           </div>
         </div>

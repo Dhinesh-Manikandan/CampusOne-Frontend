@@ -95,12 +95,12 @@ export default function EventModal({
         <form onSubmit={handleSubmitWithValidation} className="form-grid">
           <div className="form-group full-width">
             <label>Event Title *</label>
-            <input 
-              type="text" 
-              placeholder="e.g. Annual Tech Hackathon 2026" 
-              value={eventForm.title} 
-              onChange={e => setEventForm({ ...eventForm, title: e.target.value })} 
-              required 
+            <input
+              type="text"
+              placeholder="e.g. Annual Tech Hackathon 2026"
+              value={eventForm.title}
+              onChange={e => setEventForm({ ...eventForm, title: e.target.value })}
+              required
             />
           </div>
           <div className="form-group">
@@ -115,58 +115,58 @@ export default function EventModal({
           </div>
           <div className="form-group">
             <label>Venue / Location *</label>
-            <input 
-              type="text" 
-              placeholder="e.g. Auditorium Hall A" 
-              value={eventForm.venue} 
-              onChange={e => setEventForm({ ...eventForm, venue: e.target.value })} 
-              required 
+            <input
+              type="text"
+              placeholder="e.g. Auditorium Hall A"
+              value={eventForm.venue}
+              onChange={e => setEventForm({ ...eventForm, venue: e.target.value })}
+              required
             />
           </div>
           <div className="form-group">
             <label>Event Date *</label>
-            <input 
-              type="date" 
-              value={eventForm.eventDate} 
-              onChange={e => setEventForm({ ...eventForm, eventDate: e.target.value })} 
-              required 
+            <input
+              type="date"
+              value={eventForm.eventDate}
+              onChange={e => setEventForm({ ...eventForm, eventDate: e.target.value })}
+              required
             />
           </div>
           <div className="form-group">
-            <label>Registration Deadline * <span style={{ fontSize: '0.8em', color: 'var(--text-muted)' }}>(Before or on Event Date)</span></label>
-            <input 
-              type="date" 
-              value={eventForm.registrationDeadline} 
-              onChange={e => setEventForm({ ...eventForm, registrationDeadline: e.target.value })} 
-              required 
+            <label>Registration Deadline * <span style={{ fontSize: '0.8em', color: 'var(--text-muted)' }}></span></label>
+            <input
+              type="date"
+              value={eventForm.registrationDeadline}
+              onChange={e => setEventForm({ ...eventForm, registrationDeadline: e.target.value })}
+              required
             />
           </div>
           <div className="form-group">
-            <label>Start Time * <span style={{ fontSize: '0.8em', color: 'var(--text-muted)' }}>(Specify AM/PM e.g. 09:30 AM)</span></label>
-            <input 
-              type="time" 
-              value={eventForm.startTime} 
-              onChange={e => setEventForm({ ...eventForm, startTime: e.target.value })} 
-              required 
+            <label>Start Time * <span style={{ fontSize: '0.8em', color: 'var(--text-muted)' }}></span></label>
+            <input
+              type="time"
+              value={eventForm.startTime}
+              onChange={e => setEventForm({ ...eventForm, startTime: e.target.value })}
+              required
             />
           </div>
           <div className="form-group">
-            <label>End Time * <span style={{ fontSize: '0.8em', color: 'var(--text-muted)' }}>(Specify AM/PM e.g. 05:30 PM)</span></label>
-            <input 
-              type="time" 
-              value={eventForm.endTime} 
-              onChange={e => setEventForm({ ...eventForm, endTime: e.target.value })} 
-              required 
+            <label>End Time * <span style={{ fontSize: '0.8em', color: 'var(--text-muted)' }}></span></label>
+            <input
+              type="time"
+              value={eventForm.endTime}
+              onChange={e => setEventForm({ ...eventForm, endTime: e.target.value })}
+              required
             />
           </div>
           <div className="form-group">
             <label>Maximum Capacity *</label>
-            <input 
-              type="number" 
+            <input
+              type="number"
               min="1"
-              value={eventForm.maxParticipants} 
-              onChange={e => setEventForm({ ...eventForm, maxParticipants: e.target.value })} 
-              required 
+              value={eventForm.maxParticipants}
+              onChange={e => setEventForm({ ...eventForm, maxParticipants: e.target.value })}
+              required
             />
           </div>
           <div className="form-group">
@@ -180,21 +180,21 @@ export default function EventModal({
           </div>
           <div className="form-group full-width">
             <label>Banner Image URL <span style={{ fontSize: '0.8em', color: 'var(--text-muted)' }}>(Optional, must start with http:// or https://)</span></label>
-            <input 
-              type="text" 
-              placeholder="https://images.unsplash.com/..." 
-              value={eventForm.bannerImage} 
-              onChange={e => setEventForm({ ...eventForm, bannerImage: e.target.value })} 
+            <input
+              type="text"
+              placeholder="https://images.unsplash.com/..."
+              value={eventForm.bannerImage}
+              onChange={e => setEventForm({ ...eventForm, bannerImage: e.target.value })}
             />
           </div>
           <div className="form-group full-width">
             <label>Description * <span style={{ fontSize: '0.8em', color: 'var(--text-muted)' }}>(Minimum 10 characters)</span></label>
-            <textarea 
-              rows="3" 
-              placeholder="Detailed description of event schedule and guidelines..." 
-              value={eventForm.description} 
-              onChange={e => setEventForm({ ...eventForm, description: e.target.value })} 
-              required 
+            <textarea
+              rows="3"
+              placeholder="Detailed description of event schedule and guidelines..."
+              value={eventForm.description}
+              onChange={e => setEventForm({ ...eventForm, description: e.target.value })}
+              required
             />
           </div>
 
@@ -208,8 +208,8 @@ export default function EventModal({
               )}
             </label>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '6px' }}>
-              <input 
-                type="file" 
+              <input
+                type="file"
                 accept=".pdf,application/pdf"
                 id="event-pdf-upload-input"
                 style={{ display: 'none' }}
@@ -233,9 +233,9 @@ export default function EventModal({
                   }
                 }}
               />
-              <button 
-                type="button" 
-                className="btn btn-secondary" 
+              <button
+                type="button"
+                className="btn btn-secondary"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                 onClick={() => document.getElementById('event-pdf-upload-input').click()}
               >
@@ -243,8 +243,8 @@ export default function EventModal({
                 {eventForm.pdfFileName ? 'Change PDF File' : 'Upload Event Description PDF'}
               </button>
               {eventForm.pdfFileName && (
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className="btn btn-secondary btn-sm"
                   style={{ color: '#ef4444' }}
                   onClick={() => setEventForm(prev => ({ ...prev, pdfFile: null, pdfFileName: '' }))}

@@ -47,3 +47,10 @@
 .btn-remove:hover {
   background-color: rgba(244, 63, 94, 0.1);
 }
+
+select.form-control {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  line-height: normal;
+}
+

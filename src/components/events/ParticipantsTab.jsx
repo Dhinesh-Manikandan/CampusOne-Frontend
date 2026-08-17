@@ -11,9 +11,25 @@ export default function ParticipantsTab({
   participants,
   handleCancelRegistration
 }) {
-  const adminEvents = events.filter(
-    e => String(e.createdBy) === String(user?.id) || user?.role === 'ADMIN' || user?.role === 'APP_ADMIN' || user?.role === 'EVENT_ADMIN'
-  );
+  const isAppAdmin = user?.role === 'ADMIN' || user?.role === 'APP_ADMIN' || (Array.isArray(user?.roles) && user.roles.some(r => r === 'APP_ADMIN' || r?.roleName === 'ROLE_APP_ADMIN'));
+
+  const adminEvents = events.filter(e => {
+    if (isAppAdmin) return true;
+    const creatorId = typeof e.createdBy === 'object' ? e.createdBy?.id : e.createdBy;
+    return String(creatorId) === String(user?.id) || (e.organizerEmail && e.organizerEmail === user?.email);
+  });
+
+  const filteredParticipants = (participants || []).filter(reg => {
+    if (!participantSearch || !participantSearch.trim()) return true;
+    const query = participantSearch.toLowerCase().trim();
+    const u = reg.user || {};
+    const name = (u.fullName || u.name || u.username || '').toLowerCase();
+    const email = (u.email || '').toLowerCase();
+    const regNo = String(u.registrationNumber || u.regNo || '').toLowerCase();
+    const dept = String(u.department || '').toLowerCase();
+
+    return name.includes(query) || email.includes(query) || regNo.includes(query) || dept.includes(query);
+  });
 
   return (
     <div>
@@ -46,13 +62,13 @@ export default function ParticipantsTab({
         <div className="glass-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
             <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '18px' }}>
-              Registered Participants ({participants.length})
+              Registered Participants ({filteredParticipants.length})
             </h3>
             <div className="search-box" style={{ width: '280px', marginBottom: 0 }}>
               <i className="fa-solid fa-magnifying-glass"></i>
               <input 
                 type="text" 
-                placeholder="Search name/email (press Enter)..." 
+                placeholder="Search reg no, name, email..." 
                 value={participantSearch}
                 onChange={e => {
                   setParticipantSearch(e.target.value);
@@ -69,7 +85,7 @@ export default function ParticipantsTab({
             </div>
           </div>
 
-          {participants.length === 0 ? (
+          {filteredParticipants.length === 0 ? (
             <div className="empty-state">
               <i className="fa-solid fa-user-slash"></i>
               <p>No participants registered or matching filter.</p>
@@ -89,7 +105,7 @@ export default function ParticipantsTab({
                   </tr>
                 </thead>
                 <tbody>
-                  {participants.map((reg, index) => {
+                  {filteredParticipants.map((reg, index) => {
                     const participantUser = reg.user || {};
                     const displayName = participantUser.fullName || participantUser.name || participantUser.username || (participantUser.email ? participantUser.email.split('@')[0] : 'Student Participant');
                     const regNo = participantUser.registrationNumber || 'N/A';

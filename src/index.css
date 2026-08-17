@@ -133,6 +133,13 @@ input, select, textarea {
   font-size: 0.95rem;
 }
 
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  line-height: normal;
+}
+
 /* Scrollbars */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -253,4 +260,14 @@ input, select, textarea {
 }
 .card-hover:hover {
   box-shadow: var(--card-shadow-hover);
+}
+
+/* ── Table Header Contrast ── */
+.table th,
+.custom-table th,
+table th,
+thead th {
+  background: #334155 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
 }

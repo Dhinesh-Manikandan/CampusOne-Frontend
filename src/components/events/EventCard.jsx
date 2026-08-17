@@ -65,8 +65,8 @@ export default function EventCard({
             <i className="fa-solid fa-circle-info"></i> Details
           </button>
 
-          {/* Student / Non-Creator Action Buttons */}
-          {(!user || user.role === 'STUDENT') && (
+          {/* Non-Creator Registration Action Buttons (Students & Event Admins who didn't create this event) */}
+          {!isCreator && (
             isDeadlinePassed ? (
               <button className="btn btn-sm btn-secondary" disabled style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', opacity: 1, cursor: 'not-allowed' }}>
                 <i className="fa-solid fa-lock"></i> Deadline Ended
