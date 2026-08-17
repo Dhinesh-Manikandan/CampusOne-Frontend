@@ -64,7 +64,7 @@ function MainApp() {
   const navigate = useNavigate();
 
   const getTabForPath = (path, isAdminApp, isAdminEvent) => {
-    if (path === '/admin-requests') return isAdminApp ? 'admin_requests' : 'access_denied';
+    if (path === '/admin-requests') return (isAdminApp || isAdminEvent) ? 'admin_requests' : 'access_denied';
     if (path === '/app-admins') return isAdminApp ? 'app_admins' : 'access_denied';
     if (path === '/admin-dashboard') return isAdminApp ? 'admin_dashboard' : 'access_denied';
     if (path === '/my-events') return isAdminEvent ? 'my_events' : 'access_denied';

@@ -108,9 +108,14 @@ export default function DashboardTab({
             <i className="fa-solid fa-compass"></i> Explore Catalog
           </button>
           {isStudent && (
-            <button className="btn btn-secondary" onClick={() => setActiveTab('my_registered_events')}>
-              <i className="fa-solid fa-ticket"></i> My Registered Events
-            </button>
+            <>
+              <button className="btn btn-secondary" onClick={() => setActiveTab('my_registered_events')}>
+                <i className="fa-solid fa-ticket"></i> My Registered Events
+              </button>
+              <button className="btn btn-secondary" onClick={() => setActiveTab('profile')}>
+                <i className="fa-solid fa-user-shield"></i> Request Admin Rights
+              </button>
+            </>
           )}
         </div>
       </div>

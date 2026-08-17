@@ -103,6 +103,16 @@ export default function SidebarNav({
               <i className="fa-solid fa-shield-halved"></i>
               {isSidebarOpen && <span>App Admin Management</span>}
             </button>
+
+            <button
+              type="button"
+              className={`sidebar-nav-item ${activeTab === 'admin_requests' ? 'active' : ''}`}
+              onClick={() => setActiveTab('admin_requests')}
+              title="Admin Role Requests"
+            >
+              <i className="fa-solid fa-user-shield"></i>
+              {isSidebarOpen && <span>Role Requests</span>}
+            </button>
           </>
         )}
 
@@ -139,6 +149,16 @@ export default function SidebarNav({
             >
               <i className="fa-solid fa-bullhorn"></i>
               {isSidebarOpen && <span>Noticeboard & Alerts</span>}
+            </button>
+
+            <button
+              type="button"
+              className={`sidebar-nav-item ${activeTab === 'admin_requests' || activeTab === 'event_admin_requests' ? 'active' : ''}`}
+              onClick={() => setActiveTab('admin_requests')}
+              title="Event Admin Role Requests"
+            >
+              <i className="fa-solid fa-user-check"></i>
+              {isSidebarOpen && <span>Event Admin Requests</span>}
             </button>
           </>
         )}
@@ -191,6 +211,16 @@ export default function SidebarNav({
             {isSidebarOpen && <span>Noticeboard & Alerts</span>}
           </button>
         )}
+
+        <button
+          type="button"
+          className={`sidebar-nav-item ${activeTab === 'profile' ? 'active' : ''}`}
+          onClick={() => setActiveTab('profile')}
+          title="My Profile & Admin Role Requests"
+        >
+          <i className="fa-solid fa-user-shield"></i>
+          {isSidebarOpen && <span>Profile & Admin Requests</span>}
+        </button>
       </div>
 
       {/* 4. STICKY BOTTOM PROFILE SECTION */}

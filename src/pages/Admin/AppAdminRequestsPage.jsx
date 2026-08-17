@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { UserCheck, Check, X, ShieldAlert, AlertCircle, CheckCircle2, Filter, MessageSquare, Clock } from 'lucide-react';
+import { UserCheck, Check, X, ShieldAlert, AlertCircle, CheckCircle2, Filter, MessageSquare, Clock, Shield } from 'lucide-react';
 import { adminRequestService } from '../../services/adminRequestService';
 import { useAuth } from '../../context/AuthContext';
+import { formatDateDMY } from '../../utils/formatDate';
 import './AppAdminRequestsPage.css';
 
 export const AppAdminRequestsPage = () => {
   const { user } = useAuth();
+  const userRole = (user?.role || '').toUpperCase();
+  const isAppAdmin = userRole === 'APP_ADMIN' || (Array.isArray(user?.roles) && user.roles.some(r => (typeof r === 'string' ? r : r.roleName) === 'ROLE_APP_ADMIN' || r === 'APP_ADMIN'));
+
+  const [roleTypeTab, setRoleTypeTab] = useState(() => (isAppAdmin ? 'APP_ADMIN' : 'EVENT_ADMIN')); // 'APP_ADMIN' or 'EVENT_ADMIN'
   const [statusFilter, setStatusFilter] = useState('PENDING'); // 'PENDING', 'APPROVED', 'REJECTED'
   const [requests, setRequests] = useState([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
@@ -13,16 +18,19 @@ export const AppAdminRequestsPage = () => {
   const [rejectModalId, setRejectModalId] = useState(null);
   const [rejectRemarks, setRejectRemarks] = useState('');
 
-  const isAppAdmin = user?.role === 'APP_ADMIN';
-
   useEffect(() => {
-    fetchRequests(statusFilter);
-  }, [statusFilter]);
+    fetchRequests(roleTypeTab, statusFilter);
+  }, [roleTypeTab, statusFilter]);
 
-  const fetchRequests = async (status) => {
+  const fetchRequests = async (roleType, status) => {
     setLoadingRequests(true);
     try {
-      const data = await adminRequestService.getPendingRequests(status);
+      let data = [];
+      if (roleType === 'EVENT_ADMIN') {
+        data = await adminRequestService.getPendingEventAdminRequests(status);
+      } else {
+        data = await adminRequestService.getPendingRequests(status);
+      }
       setRequests(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to fetch requests:', err);
@@ -34,9 +42,14 @@ export const AppAdminRequestsPage = () => {
 
   const handleApprove = async (id, studentName) => {
     try {
-      await adminRequestService.approveRequest(id);
-      setAlert({ type: 'success', message: `Approved request for ${studentName || 'User'}!` });
-      fetchRequests(statusFilter);
+      if (roleTypeTab === 'EVENT_ADMIN') {
+        await adminRequestService.approveEventAdminRequest(id);
+        setAlert({ type: 'success', message: `Approved Event Admin request for ${studentName || 'User'}!` });
+      } else {
+        await adminRequestService.approveRequest(id);
+        setAlert({ type: 'success', message: `Approved App Admin request for ${studentName || 'User'}!` });
+      }
+      fetchRequests(roleTypeTab, statusFilter);
     } catch (err) {
       setAlert({ type: 'error', message: err.message || 'Failed to approve request.' });
     }
@@ -47,11 +60,15 @@ export const AppAdminRequestsPage = () => {
     if (!rejectModalId) return;
 
     try {
-      await adminRequestService.rejectRequest(rejectModalId, rejectRemarks || 'Not enough justification at this time');
+      if (roleTypeTab === 'EVENT_ADMIN') {
+        await adminRequestService.rejectEventAdminRequest(rejectModalId, rejectRemarks || 'Not enough justification at this time');
+      } else {
+        await adminRequestService.rejectRequest(rejectModalId, rejectRemarks || 'Not enough justification at this time');
+      }
       setAlert({ type: 'info', message: `Rejected request.` });
       setRejectModalId(null);
       setRejectRemarks('');
-      fetchRequests(statusFilter);
+      fetchRequests(roleTypeTab, statusFilter);
     } catch (err) {
       setAlert({ type: 'error', message: err.message || 'Failed to reject request.' });
     }
@@ -61,9 +78,9 @@ export const AppAdminRequestsPage = () => {
     <div className="admin-requests-page">
       <div className="page-header" style={{ marginBottom: '1.5rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800 }}>App-Admin Privilege Requests</h1>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Administrative Role Requests</h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-            Review, approve, or reject administrative role requests submitted by Students and Event Admins.
+            Review, approve, or reject Application Admin and Event Admin privilege requests submitted by users.
           </p>
         </div>
       </div>
@@ -75,7 +92,45 @@ export const AppAdminRequestsPage = () => {
         </div>
       )}
 
-      {/* Filter Tabs */}
+      {/* Role Type Selector Tabs */}
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', borderBottom: '1px solid var(--card-border)', paddingBottom: '0.75rem' }}>
+        {isAppAdmin && (
+          <button
+            className={`tab-btn ${roleTypeTab === 'APP_ADMIN' ? 'active' : ''}`}
+            onClick={() => setRoleTypeTab('APP_ADMIN')}
+            style={{
+              fontWeight: 700,
+              fontSize: '0.95rem',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              background: roleTypeTab === 'APP_ADMIN' ? '#3b82f6' : 'transparent',
+              color: roleTypeTab === 'APP_ADMIN' ? '#ffffff' : 'var(--text-muted)',
+              border: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            <Shield size={16} style={{ display: 'inline', marginRight: '6px' }} /> Application Admin Requests
+          </button>
+        )}
+        <button
+          className={`tab-btn ${roleTypeTab === 'EVENT_ADMIN' ? 'active' : ''}`}
+          onClick={() => setRoleTypeTab('EVENT_ADMIN')}
+          style={{
+            fontWeight: 700,
+            fontSize: '0.95rem',
+            padding: '8px 16px',
+            borderRadius: '6px',
+            background: roleTypeTab === 'EVENT_ADMIN' ? '#3b82f6' : 'transparent',
+            color: roleTypeTab === 'EVENT_ADMIN' ? '#ffffff' : 'var(--text-muted)',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+        >
+          <ShieldAlert size={16} style={{ display: 'inline', marginRight: '6px' }} /> Event Admin Requests
+        </button>
+      </div>
+
+      {/* Filter Status Tabs */}
       <div className="profile-tabs" style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.75rem' }}>
         <button
           className={`tab-btn ${statusFilter === 'PENDING' ? 'active' : ''}`}
@@ -100,7 +155,7 @@ export const AppAdminRequestsPage = () => {
       {/* Review Card */}
       <div className="card admin-review-card">
         <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h2>{statusFilter} Requests</h2>
+          <h2>{roleTypeTab === 'EVENT_ADMIN' ? 'Event Admin' : 'App Admin'} • {statusFilter} Requests</h2>
           <span className={`badge ${statusFilter === 'PENDING' ? 'badge-warning' : statusFilter === 'APPROVED' ? 'badge-success' : 'badge-danger'}`}>
             {requests.length} {statusFilter}
           </span>
@@ -110,7 +165,7 @@ export const AppAdminRequestsPage = () => {
           <p style={{ color: 'var(--text-muted)', padding: '1rem 0' }}>Loading requests...</p>
         ) : requests.length === 0 ? (
           <p className="no-requests" style={{ color: 'var(--text-muted)', padding: '1.5rem 0', textAlign: 'center' }}>
-            No {statusFilter.toLowerCase()} requests found.
+            No {statusFilter.toLowerCase()} {roleTypeTab === 'EVENT_ADMIN' ? 'Event Admin' : 'App Admin'} requests found.
           </p>
         ) : (
           <div className="requests-review-list" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -129,7 +184,7 @@ export const AppAdminRequestsPage = () => {
                     <div>
                       <h4 style={{ fontSize: '1.05rem', fontWeight: 700 }}>{userName}</h4>
                       <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)' }}>
-                        {userEmail} • Reg No: <code>{userReg}</code> {userDept ? `• ${userDept}` : ''} {userYear ? `(${userYear})` : ''} {userPhone ? `• ${userPhone}` : ''}
+                        {userEmail} • Reg No: <code>{userReg}</code> {userDept ? `• ${userDept}` : ''} {userYear ? `(${userYear})` : ''} {userPhone ? `• ${userPhone}` : ''} • Submitted: {formatDateDMY(req.requestedAt)}
                       </p>
                     </div>
                     <span className={`badge ${req.status === 'PENDING' ? 'badge-warning' : req.status === 'APPROVED' ? 'badge-success' : 'badge-danger'}`}>
@@ -151,13 +206,14 @@ export const AppAdminRequestsPage = () => {
                   )}
 
                   {req.status === 'PENDING' && (
-                    <div style={{ display: 'flex', gap: '0.65rem' }}>
-                      <button className="btn btn-success btn-sm" onClick={() => handleApprove(req.id, userName)}>
-                        <Check size={15} /> Approve & Grant Admin
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button className="btn btn-primary btn-sm" onClick={() => handleApprove(req.id, userName)}>
+                        <Check size={15} /> Approve & Grant {roleTypeTab === 'EVENT_ADMIN' ? 'Event Admin' : 'App Admin'}
                       </button>
                       <button
-                        className="btn btn-outline-danger btn-sm"
+                        className="btn btn-secondary btn-sm"
                         onClick={() => { setRejectModalId(req.id); setRejectRemarks(''); }}
+                        style={{ color: '#e11d48' }}
                       >
                         <X size={15} /> Reject
                       </button>
@@ -196,4 +252,3 @@ export const AppAdminRequestsPage = () => {
     </div>
   );
 };
-

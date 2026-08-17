@@ -1,4 +1,6 @@
 import React from 'react';
+import { formatTime12Hour } from '../../utils/formatTime';
+import { formatDateDMY } from '../../utils/formatDate';
 
 export default function EventCard({
   event,
@@ -20,10 +22,13 @@ export default function EventCard({
   const isCreator = isEventCreator(event);
   const isRegistered = registeredEventIds?.has ? registeredEventIds.has(event.id) : Array.isArray(registeredEventIds) ? registeredEventIds.includes(event.id) : false;
 
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isDeadlinePassed = event.registrationDeadline && String(event.registrationDeadline) < todayStr;
+
   return (
     <div className="event-card">
-      <span className={`status-badge ${event.status?.toLowerCase() || 'published'}`}>
-        {event.status || 'PUBLISHED'}
+      <span className={`status-badge ${isDeadlinePassed ? 'cancelled' : (event.status?.toLowerCase() || 'published')}`}>
+        {isDeadlinePassed ? 'DEADLINE ENDED' : (event.status || 'PUBLISHED')}
       </span>
       {event.bannerImage ? (
         <img src={event.bannerImage} alt={event.title} className="event-banner" />
@@ -43,8 +48,13 @@ export default function EventCard({
             <i className="fa-solid fa-location-dot"></i> {event.venue}
           </div>
           <div className="meta-item">
-            <i className="fa-solid fa-calendar"></i> {event.eventDate} ({event.startTime} - {event.endTime})
+            <i className="fa-solid fa-calendar"></i> {formatDateDMY(event.eventDate)} ({formatTime12Hour(event.startTime)} - {formatTime12Hour(event.endTime)})
           </div>
+          {event.registrationDeadline && (
+            <div className="meta-item" style={{ color: isDeadlinePassed ? '#ef4444' : 'var(--text-muted)' }}>
+              <i className="fa-solid fa-clock"></i> Registration Deadline: {formatDateDMY(event.registrationDeadline)} {isDeadlinePassed ? '(Ended)' : ''}
+            </div>
+          )}
           <div className="meta-item">
             <i className="fa-solid fa-users"></i> Registered: {count} / {event.maxParticipants || '∞'}
           </div>
@@ -57,7 +67,11 @@ export default function EventCard({
 
           {/* Student / Non-Creator Action Buttons */}
           {(!user || user.role === 'STUDENT') && (
-            isRegistered ? (
+            isDeadlinePassed ? (
+              <button className="btn btn-sm btn-secondary" disabled style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', opacity: 1, cursor: 'not-allowed' }}>
+                <i className="fa-solid fa-lock"></i> Deadline Ended
+              </button>
+            ) : isRegistered ? (
               <button className="btn btn-sm btn-secondary" disabled style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.4)', opacity: 1, cursor: 'default' }}>
                 <i className="fa-solid fa-circle-check"></i> Registered
               </button>
