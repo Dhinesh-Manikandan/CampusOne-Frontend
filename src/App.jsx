@@ -392,13 +392,27 @@ function MainApp() {
   // 5. View Event Details
   const viewEventDetails = async (eventId) => {
     if (!eventId) return;
+    const targetId = typeof eventId === 'object' ? eventId.id : eventId;
+    const initialLocalEvent = typeof eventId === 'object' ? eventId : events.find(e => e.id === targetId);
+
+    if (initialLocalEvent) {
+      setSelectedEventDetails(initialLocalEvent);
+      setShowDetailsModal(true);
+    }
+
     try {
-      const res = await apiClient.fetchWithAuth(`/api/events/${eventId}`);
+      const res = await apiClient.fetchWithAuth(`/api/events/${targetId}`);
       if (res.ok) {
         const data = await res.json();
-        setSelectedEventDetails(data);
+        // Merge data with initialLocalEvent so any local PDF properties are retained if needed
+        setSelectedEventDetails(prev => ({
+          ...initialLocalEvent,
+          ...data,
+          pdfFile: data.pdfFile || initialLocalEvent?.pdfFile || null,
+          pdfFileName: data.pdfFileName || initialLocalEvent?.pdfFileName || ''
+        }));
         setShowDetailsModal(true);
-        loadParticipantCount(eventId);
+        loadParticipantCount(targetId);
       }
     } catch (e) {
       console.error('Error fetching event details:', e);
