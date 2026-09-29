@@ -58,6 +58,13 @@ pipeline {
             }
         }
 
+    stage('Check Docker') {
+    steps {
+        bat 'docker --version'
+        bat 'docker info'
+        }
+    }
+        
         stage('Build Docker Image') {
             steps {
                 echo '=== Stage 5: Build Docker Image ==='
