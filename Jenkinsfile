@@ -60,10 +60,18 @@ pipeline {
 
     stage('Check Docker') {
     steps {
-        bat 'docker --version'
-        bat 'docker info'
-        }
+        bat '''
+            echo ===== JENKINS PATH =====
+            echo %PATH%
+
+            echo ===== DOCKER LOCATION =====
+            dir "C:\\Users\\Dell\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin"
+
+            echo ===== DOCKER VERSION =====
+            "C:\\Users\\Dell\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe" --version
+        '''
     }
+}
         
         stage('Build Docker Image') {
             steps {
