@@ -2,150 +2,228 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE_NAME = "dhineshmanikandan2006/campusone-frontend"
-        DOCKER_HUB_CREDENTIALS_ID = "docker-hub-credentials"
+        // =========================================================
+        // Docker configuration
+        // =========================================================
+        DOCKER_EXE = 'C:\\Users\\Dell\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe'
+        DOCKER_HUB_USER = 'dhineshmanikandan2006'
+        DOCKER_IMAGE_NAME = 'dhineshmanikandan2006/campusone-frontend'
+
+        // Jenkins credential ID for Docker Hub PAT
+        DOCKER_PAT_CREDENTIALS_ID = 'docker-hub-pat'
+
+        // Image tag = Jenkins build number
         IMAGE_TAG = "${BUILD_NUMBER}"
     }
 
     stages {
 
+        // =========================================================
+        // 1. CHECKOUT
+        // =========================================================
         stage('Checkout Code') {
             steps {
-                echo '=== Stage 1: Checkout Source Code ==='
+                echo '=============================================='
+                echo 'Stage 1: Checkout Source Code'
+                echo '=============================================='
+
                 checkout scm
+
+                echo 'Source code checkout completed successfully.'
             }
         }
 
+        // =========================================================
+        // 2. INSTALL DEPENDENCIES
+        // =========================================================
         stage('Install Dependencies') {
             steps {
-                echo '=== Stage 2: Install Dependencies ==='
+                echo '=============================================='
+                echo 'Stage 2: Install Dependencies'
+                echo '=============================================='
 
-                script {
-                    if (isUnix()) {
-                        sh 'npm ci'
-                    } else {
-                        bat 'npm ci'
-                    }
-                }
+                bat 'npm ci'
+
+                echo 'Dependencies installed successfully.'
             }
         }
 
+        // =========================================================
+        // 3. RUN TESTS
+        // =========================================================
         stage('Run Tests') {
             steps {
-                echo '=== Stage 3: Run Tests ==='
+                echo '=============================================='
+                echo 'Stage 3: Run Tests'
+                echo '=============================================='
 
-                script {
-                    if (isUnix()) {
-                        sh 'npm test --if-present'
-                    } else {
-                        bat 'npm test --if-present'
-                    }
-                }
+                bat 'npm test --if-present'
+
+                echo 'Tests completed successfully.'
             }
         }
 
+        // =========================================================
+        // 4. BUILD REACT APPLICATION
+        // =========================================================
         stage('Build React Application') {
             steps {
-                echo '=== Stage 4: Build React Application ==='
+                echo '=============================================='
+                echo 'Stage 4: Build React Application'
+                echo '=============================================='
 
-                script {
-                    if (isUnix()) {
-                        sh 'npm run build'
-                    } else {
-                        bat 'npm run build'
-                    }
-                }
+                // Production API URL.
+                // Nginx handles /api requests and proxies them
+                // to the CampusOne backend container.
+                bat 'set VITE_API_BASE_URL=/api&& npm run build'
+
+                echo 'React application built successfully.'
             }
         }
 
+        // =========================================================
+        // 5. VERIFY DOCKER
+        // =========================================================
+        stage('Verify Docker') {
+            steps {
+                echo '=============================================='
+                echo 'Stage 5: Verify Docker'
+                echo '=============================================='
+
+                bat '"%DOCKER_EXE%" --version'
+
+                echo 'Docker is accessible from Jenkins.'
+            }
+        }
+
+        // =========================================================
+        // 6. BUILD DOCKER IMAGE
+        // =========================================================
         stage('Build Docker Image') {
             steps {
-                echo '=== Stage 5: Build Docker Image ==='
+                echo '=============================================='
+                echo 'Stage 6: Build Docker Image'
+                echo '=============================================='
 
-                script {
-                    if (isUnix()) {
-                        sh """
-                            docker build \
-                              --build-arg VITE_API_BASE_URL=/api \
-                              -t ${DOCKER_IMAGE_NAME}:${IMAGE_TAG} \
-                              -t ${DOCKER_IMAGE_NAME}:latest .
-                        """
-                    } else {
-                        bat """
-                            docker build ^
-                              --build-arg VITE_API_BASE_URL=/api ^
-                              -t %DOCKER_IMAGE_NAME%:%IMAGE_TAG% ^
-                              -t %DOCKER_IMAGE_NAME%:latest .
-                        """
-                    }
-                }
+                bat """
+                    "%DOCKER_EXE%" build ^
+                      --build-arg VITE_API_BASE_URL=/api ^
+                      -t %DOCKER_IMAGE_NAME%:%IMAGE_TAG% ^
+                      -t %DOCKER_IMAGE_NAME%:latest .
+                """
+
+                echo 'Docker image built successfully.'
+                echo "Image: %DOCKER_IMAGE_NAME%:%IMAGE_TAG%"
+                echo "Image: %DOCKER_IMAGE_NAME%:latest"
             }
         }
 
-        stage('Login to Docker Hub') {
+        // =========================================================
+        // 7. LOGIN TO DOCKER HUB
+        // =========================================================
+        stage('Docker Hub Login') {
             steps {
-                echo '=== Stage 6: Login to Docker Hub ==='
+                echo '=============================================='
+                echo 'Stage 7: Login to Docker Hub'
+                echo '=============================================='
 
                 withCredentials([
-                    usernamePassword(
-                        credentialsId: "${DOCKER_HUB_CREDENTIALS_ID}",
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
+                    string(
+                        credentialsId: "${DOCKER_PAT_CREDENTIALS_ID}",
+                        variable: 'DOCKER_PAT'
                     )
                 ]) {
-                    script {
-                        if (isUnix()) {
-                            sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
-                        } else {
-                            bat 'echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin'
+                    powershell '''
+                        $DOCKER_PAT | & $env:DOCKER_EXE login `
+                            --username $env:DOCKER_HUB_USER `
+                            --password-stdin
+
+                        if ($LASTEXITCODE -ne 0) {
+                            exit $LASTEXITCODE
                         }
-                    }
+                    '''
                 }
+
+                echo 'Docker Hub login successful.'
             }
         }
 
+        // =========================================================
+        // 8. PUSH DOCKER IMAGE
+        // =========================================================
         stage('Push Docker Image') {
             steps {
-                echo '=== Stage 7: Push Docker Image ==='
+                echo '=============================================='
+                echo 'Stage 8: Push Docker Image to Docker Hub'
+                echo '=============================================='
 
-                script {
-                    if (isUnix()) {
-                        sh """
-                            docker push ${DOCKER_IMAGE_NAME}:${IMAGE_TAG}
-                            docker push ${DOCKER_IMAGE_NAME}:latest
-                        """
-                    } else {
-                        bat """
-                            docker push %DOCKER_IMAGE_NAME%:%IMAGE_TAG%
-                            docker push %DOCKER_IMAGE_NAME%:latest
-                        """
-                    }
-                }
+                bat """
+                    "%DOCKER_EXE%" push %DOCKER_IMAGE_NAME%:%IMAGE_TAG%
+                    "%DOCKER_EXE%" push %DOCKER_IMAGE_NAME%:latest
+                """
+
+                echo 'Docker images pushed successfully.'
+                echo "Pushed: %DOCKER_IMAGE_NAME%:%IMAGE_TAG%"
+                echo "Pushed: %DOCKER_IMAGE_NAME%:latest"
+            }
+        }
+
+        // =========================================================
+        // 9. VERIFY IMAGE
+        // =========================================================
+        stage('Verify Docker Image') {
+            steps {
+                echo '=============================================='
+                echo 'Stage 9: Verify Docker Image'
+                echo '=============================================='
+
+                bat '"%DOCKER_EXE%" images %DOCKER_IMAGE_NAME%'
+
+                echo 'Docker image verification completed.'
             }
         }
     }
 
+    // =============================================================
+    // POST BUILD ACTIONS
+    // =============================================================
     post {
-        always {
-            echo '=== Pipeline Completed ==='
-
-            script {
-                if (isUnix()) {
-                    sh 'docker logout || true'
-                } else {
-                    bat 'docker logout || exit 0'
-                }
-            }
-        }
 
         success {
-            echo "SUCCESS: Frontend Docker image pushed successfully."
-            echo "Image: ${DOCKER_IMAGE_NAME}:${IMAGE_TAG}"
-            echo "Image: ${DOCKER_IMAGE_NAME}:latest"
+            echo '''
+            ==============================================
+            CAMPUSONE FRONTEND PIPELINE SUCCESS
+            ==============================================
+            Build completed successfully.
+
+            Docker image:
+            dhineshmanikandan2006/campusone-frontend
+
+            Tags:
+            - Jenkins Build Number
+            - latest
+
+            The image has been pushed to Docker Hub.
+            ==============================================
+            '''
         }
 
         failure {
-            echo 'FAILURE: Frontend pipeline failed. Check the console output.'
+            echo '''
+            ==============================================
+            CAMPUSONE FRONTEND PIPELINE FAILED
+            ==============================================
+            Please check the Jenkins console output
+            for the failed stage.
+            ==============================================
+            '''
+        }
+
+        always {
+            echo 'Pipeline execution completed.'
+
+            // Logout from Docker Hub
+            bat '"%DOCKER_EXE%" logout || exit 0'
         }
     }
 }
