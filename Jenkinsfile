@@ -6,7 +6,7 @@ pipeline {
         DOCKER_EXE = 'C:\\Users\\Dell\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe'
         DOCKER_HUB_USER = 'dhineshmanikandan2006'
         DOCKER_IMAGE_NAME = 'dhineshmanikandan2006/campusone-frontend'
-        DOCKER_CREDENTIALS_ID = 'docker-hub-credentials'
+   
 
         // Image tag = Jenkins build number
         IMAGE_TAG = "${BUILD_NUMBER}"
