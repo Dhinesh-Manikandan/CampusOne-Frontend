@@ -113,50 +113,47 @@ pipeline {
             }
         }
 
-        // =========================================================
-        // 7. LOGIN TO DOCKER HUB
-        // =========================================================
         stage('Docker Hub Login') {
-            steps {
-                echo '=============================================='
-                echo 'Stage 7: Login to Docker Hub'
-                echo '=============================================='
+    steps {
+        echo '=============================================='
+        echo 'Stage 7: Login to Docker Hub'
+        echo '=============================================='
 
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: "${DOCKER_CREDENTIALS_ID}",
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )
-                ]) {
-                    bat '''
-                        echo %DOCKER_PASS% | "%DOCKER_EXE%" login -u %DOCKER_USER% --password-stdin
-                    '''
-                }
-
-                echo 'Docker Hub login successful.'
-            }
+        withCredentials([
+            usernamePassword(
+                credentialsId: "${DOCKER_CREDENTIALS_ID}",
+                usernameVariable: 'DOCKER_USER',
+                passwordVariable: 'DOCKER_PASS'
+            )
+        ]) {
+            powershell '''
+                $env:DOCKER_PASS | & $env:DOCKER_EXE login `
+                    --username $env:DOCKER_USER `
+                    --password-stdin
+            '''
         }
+
+        echo 'Docker Hub login successful.'
+    }
+}
 
         // =========================================================
         // 8. PUSH DOCKER IMAGE
         // =========================================================
         stage('Push Docker Image') {
-            steps {
-                echo '=============================================='
-                echo 'Stage 8: Push Docker Image to Docker Hub'
-                echo '=============================================='
+    steps {
+        echo '=============================================='
+        echo 'Stage 8: Push Docker Image to Docker Hub'
+        echo '=============================================='
 
-                bat """
-                    "%DOCKER_EXE%" push %DOCKER_IMAGE_NAME%:%IMAGE_TAG%
-                    "%DOCKER_EXE%" push %DOCKER_IMAGE_NAME%:latest
-                """
+        bat """
+            "%DOCKER_EXE%" push %DOCKER_IMAGE_NAME%:%IMAGE_TAG%
+            "%DOCKER_EXE%" push %DOCKER_IMAGE_NAME%:latest
+        """
 
-                echo 'Docker images pushed successfully.'
-                echo "Pushed: %DOCKER_IMAGE_NAME%:%IMAGE_TAG%"
-                echo "Pushed: %DOCKER_IMAGE_NAME%:latest"
-            }
-        }
+        echo 'Docker images pushed successfully.'
+    }
+}
 
         // =========================================================
         // 9. VERIFY IMAGE
