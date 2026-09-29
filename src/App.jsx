@@ -463,10 +463,8 @@ function MainApp() {
     const uid = targetUserId || user?.id;
     if (!activeToken || !uid) return;
     try {
-      const res = await fetch(`/api/events/user/${uid}/registrations`, {
-        headers: { Authorization: `Bearer ${activeToken}` }
-      });
-      if (res.ok) {
+      const res = await apiClient.fetchWithAuth(`/api/events/user/${uid}/registrations`);
+      if (res && res.ok) {
         const data = await res.json();
         setUserRegistrations(data);
       }

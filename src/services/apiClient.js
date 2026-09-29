@@ -1,5 +1,8 @@
 // Centralized API Client for Gather Backend (Spring Boot API integration)
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const RAW_BASE_URL = (
+  (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_API_BASE_URL || import.meta.env.REACT_APP_API_BASE_URL)) ||
+  'http://localhost:8080'
+).replace(/\/+$/, '');
 
 // ── Canonical key names (must match AuthContext.STORAGE_KEYS) ──
 const KEYS = {
@@ -17,7 +20,7 @@ const processQueue = (error, token = null) => {
 };
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem(KEYS.TOKEN);
+  const token = localStorage.getItem(KEYS.TOKEN) || localStorage.getItem('token') || localStorage.getItem('accessToken');
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
@@ -25,14 +28,32 @@ const handleAuthSessionExpired = () => {
   localStorage.removeItem(KEYS.TOKEN);
   localStorage.removeItem(KEYS.REFRESH_TOKEN);
   localStorage.removeItem(KEYS.USER);
+  localStorage.removeItem('token');
+  localStorage.removeItem('accessToken');
   window.dispatchEvent(new Event('gather_session_expired'));
+};
+
+// ── Build a clean endpoint URL, ensuring /api is properly handled ──
+const buildUrl = (endpoint) => {
+  if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+    return endpoint;
+  }
+  const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
+  if (RAW_BASE_URL.endsWith('/api')) {
+    const cleanPath = path.startsWith('/api/') ? path.substring(4) : (path === '/api' ? '' : path);
+    return `${RAW_BASE_URL}${cleanPath}`;
+  }
+
+  const apiPath = path.startsWith('/api/') || path === '/api' ? path : `/api${path}`;
+  return `${RAW_BASE_URL}${apiPath}`;
 };
 
 export const refreshTokenApi = async () => {
   const refreshToken = localStorage.getItem(KEYS.REFRESH_TOKEN);
   if (!refreshToken) throw new Error('No refresh token available');
 
-  const response = await fetch(`${BASE_URL}/auth/refresh`, {
+  const response = await fetch(buildUrl('/auth/refresh'), {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify({ refreshToken }),
@@ -86,6 +107,14 @@ async function executeFetch(url, options = {}) {
     url.includes('/auth/refresh');
 
   if (response.status === 401 && !isAuthEndpoint) {
+    const hasRefreshToken = !!localStorage.getItem(KEYS.REFRESH_TOKEN);
+    if (!hasRefreshToken) {
+      handleAuthSessionExpired();
+      const err = new Error('Session expired or unauthorized. Please log in again.');
+      err.status = 401;
+      throw err;
+    }
+
     if (isRefreshing) {
       // Queue this request until refresh completes
       const newToken = await new Promise((resolve, reject) => failedQueue.push({ resolve, reject }));
@@ -111,12 +140,6 @@ async function executeFetch(url, options = {}) {
 
   return response;
 }
-
-// ── Build a clean endpoint URL, deduplicating /api/ prefix ──
-const buildUrl = (endpoint) => {
-  const clean = endpoint.startsWith('/api/') ? endpoint.substring(4) : endpoint;
-  return `${BASE_URL}${clean.startsWith('/') ? clean : `/${clean}`}`;
-};
 
 export const apiClient = {
   async get(endpoint, headers = {}) {
