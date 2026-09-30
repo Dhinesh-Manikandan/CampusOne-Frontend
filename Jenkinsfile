@@ -1,16 +1,20 @@
 pipeline {
+
     agent any
 
+    options {
+        skipDefaultCheckout(true)
+    }
+
     environment {
+
         // =========================================================
         // Docker configuration
         // =========================================================
         DOCKER_EXE = 'C:\\Users\\Dell\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker.exe'
+
         DOCKER_HUB_USER = 'dhineshmanikandan2006'
         DOCKER_IMAGE_NAME = 'dhineshmanikandan2006/campusone-frontend'
-
-        // Jenkins credential ID for Docker Hub PAT
-        DOCKER_PAT_CREDENTIALS_ID = 'docker-hub-pat'
 
         // Image tag = Jenkins build number
         IMAGE_TAG = "${BUILD_NUMBER}"
@@ -72,9 +76,6 @@ pipeline {
                 echo 'Stage 4: Build React Application'
                 echo '=============================================='
 
-                // Production API URL.
-                // Nginx handles /api requests and proxies them
-                // to the CampusOne backend container.
                 bat 'set VITE_API_BASE_URL=/api&& npm run build'
 
                 echo 'React application built successfully.'
@@ -119,67 +120,56 @@ pipeline {
         }
 
         // =========================================================
-        // 7. LOGIN TO DOCKER HUB
-        // =========================================================
-        stage('Docker Hub Login') {
-            steps {
-                echo '=============================================='
-                echo 'Stage 7: Login to Docker Hub'
-                echo '=============================================='
-
-                withCredentials([
-                    string(
-                        credentialsId: "${DOCKER_PAT_CREDENTIALS_ID}",
-                        variable: 'DOCKER_PAT'
-                    )
-                ]) {
-                    powershell '''
-                        $DOCKER_PAT | & $env:DOCKER_EXE login `
-                            --username $env:DOCKER_HUB_USER `
-                            --password-stdin
-
-                        if ($LASTEXITCODE -ne 0) {
-                            exit $LASTEXITCODE
-                        }
-                    '''
-                }
-
-                echo 'Docker Hub login successful.'
-            }
-        }
-
-        // =========================================================
-        // 8. PUSH DOCKER IMAGE
-        // =========================================================
-        stage('Push Docker Image') {
-            steps {
-                echo '=============================================='
-                echo 'Stage 8: Push Docker Image to Docker Hub'
-                echo '=============================================='
-
-                bat """
-                    "%DOCKER_EXE%" push %DOCKER_IMAGE_NAME%:%IMAGE_TAG%
-                    "%DOCKER_EXE%" push %DOCKER_IMAGE_NAME%:latest
-                """
-
-                echo 'Docker images pushed successfully.'
-                echo "Pushed: %DOCKER_IMAGE_NAME%:%IMAGE_TAG%"
-                echo "Pushed: %DOCKER_IMAGE_NAME%:latest"
-            }
-        }
-
-        // =========================================================
-        // 9. VERIFY IMAGE
+        // 7. VERIFY IMAGE
         // =========================================================
         stage('Verify Docker Image') {
             steps {
                 echo '=============================================='
-                echo 'Stage 9: Verify Docker Image'
+                echo 'Stage 7: Verify Docker Image'
                 echo '=============================================='
 
                 bat '"%DOCKER_EXE%" images %DOCKER_IMAGE_NAME%'
 
                 echo 'Docker image verification completed.'
+            }
+        }
+
+        // =========================================================
+        // 8. DOCKER HUB PUSH INSTRUCTIONS
+        // =========================================================
+        stage('Docker Hub Push Instructions') {
+            steps {
+                echo '=============================================='
+                echo 'Stage 8: Docker Hub Push Instructions'
+                echo '=============================================='
+
+                echo """
+                ==============================================
+                FRONTEND DOCKER IMAGE READY
+                ==============================================
+
+                Image:
+                ${DOCKER_IMAGE_NAME}:${IMAGE_TAG}
+
+                Latest:
+                ${DOCKER_IMAGE_NAME}:latest
+
+                Jenkins has successfully built the Docker
+                image.
+
+                Docker Hub push will be performed manually
+                from the normal Windows terminal.
+
+                Run:
+
+                docker login -u ${DOCKER_HUB_USER}
+
+                docker push ${DOCKER_IMAGE_NAME}:${IMAGE_TAG}
+
+                docker push ${DOCKER_IMAGE_NAME}:latest
+
+                ==============================================
+                """
             }
         }
     }
@@ -196,14 +186,11 @@ pipeline {
             ==============================================
             Build completed successfully.
 
-            Docker image:
-            dhineshmanikandan2006/campusone-frontend
+            Docker image was built locally by Jenkins.
 
-            Tags:
-            - Jenkins Build Number
-            - latest
+            Docker Hub push must be performed manually
+            from the normal Windows terminal.
 
-            The image has been pushed to Docker Hub.
             ==============================================
             '''
         }
@@ -221,9 +208,6 @@ pipeline {
 
         always {
             echo 'Pipeline execution completed.'
-
-            // Logout from Docker Hub
-            bat '"%DOCKER_EXE%" logout || exit 0'
         }
     }
 }
